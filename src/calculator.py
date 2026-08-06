@@ -1,4 +1,4 @@
-# Ingredient Database works alone, Recipe Sheet needs Ingreident Database,
+# Ingredient Database works alone, Recipe Sheet needs ingredient Database,
 # Menu Items needs both, double removed
 
 
@@ -8,17 +8,22 @@ def cost_per_recipe_unit(purchase_cost: float, purchase_size: float, purchase_un
     Data source: all params come from ingredient database
     Location: Ingredient Database
     """
+    factor  = 1
+
+    if purchase_unit == "lbs" and recipe_unit == "oz":
+        factor = 16 # Standard unit conversion factor for pounds to ounces
+    elif purchase_unit == "bags" and recipe_unit == "fl oz":
+        factor = 16.88 # Row and Ride's estimated fl oz yield per tea bag
+
+    return purchase_cost / (purchase_size * factor)
     
-
-
-
 def calculate_ingredient_cost(amount_used: float, cost_per_recipe_unit: float) -> float:
     """
     Calculates the cost of an ingredient in a recipe.
     Data source: amount_used comes from recipe sheet, cost_per_recipe_unit comes from ingredient database
     Location: Recipe Sheet
     """
-    pass
+    return amount_used * cost_per_recipe_unit
 
 
 
@@ -28,7 +33,7 @@ def calculate_total_ingredient_cost(ingredient_costs: list[float]) -> float:
     Data source: ingredient_costs is the list of all ingredient cost floats for a menu item in recipe sheet
     Location: Menu Items
     """
-    pass
+    return sum(ingredient_costs)
 
 
 def calculate_gross_profit(selling_price: float, total_ingredient_cost: float) -> float:
@@ -37,7 +42,7 @@ def calculate_gross_profit(selling_price: float, total_ingredient_cost: float) -
     Data source: selling_price comes from menu_items.csv; total_ingredient_cost is computed by calculate_total_ingredient_cost()
     Location: Menu Items
     """
-    pass
+    return selling_price - total_ingredient_cost
 
 
 def calculate_margin_percent(gross_profit: float, selling_price: float) -> float:
@@ -46,7 +51,7 @@ def calculate_margin_percent(gross_profit: float, selling_price: float) -> float
     Data source: selling_price comes from menu_items.csv; gross_profit is computed by calculate_gross_profit()
     Location: Menu Items
     """
-    pass
+    return (gross_profit / selling_price) * 100
 
 
 def calculate_food_cost(margin_percent: float) -> float:
@@ -55,4 +60,4 @@ def calculate_food_cost(margin_percent: float) -> float:
     Data source: all params come from menu items
     Location: Menu Items
     """
-    pass
+    return 100 - margin_percent
