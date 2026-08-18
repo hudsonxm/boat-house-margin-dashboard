@@ -1,13 +1,20 @@
 # Ingredient Database works alone, Recipe Sheet needs ingredient Database,
 # Menu Items needs both, double removed
 
+import math
 
-def cost_per_recipe_unit(purchase_cost: float, purchase_size: float, purchase_unit: str, recipe_unit: str) -> float:
+
+def cost_per_recipe_unit(purchase_cost: float, purchase_size: float, purchase_unit: str, recipe_unit: str) -> float | None:
     """
     Calculates purchase cost per recipe unit for an ingredient.
     Data source: all params come from ingredient database
     Location: Ingredient Database
+    Returns None if purchase_cost or purchase_size is blank (NaN), since the
+    ingredient database is sparse and missing cost data can't be computed.
     """
+    if math.isnan(purchase_cost) or math.isnan(purchase_size):
+        return None
+
     factor  = 1
 
     if purchase_unit == "lbs" and recipe_unit == "oz":
@@ -25,7 +32,8 @@ def calculate_ingredient_cost(amount_used: float, cost_per_recipe_unit: float) -
     """
     return amount_used * cost_per_recipe_unit
 
-
+def build_ingredient_costs(): # TODO
+    pass
 
 def calculate_total_ingredient_cost(ingredient_costs: list[float]) -> float:
     """

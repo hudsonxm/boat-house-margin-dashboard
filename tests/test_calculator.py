@@ -46,6 +46,23 @@ def test_cost_per_recipe_unit_oat_milk() -> None:
 
     assert result == approx(0.0858, abs=0.0001)
 
+def test_cost_per_recipe_unit_blank_cost_returns_none() -> None:
+    """
+    Blank-cost test using Collagen's current row in the full ingredient
+    database (blank Purchase Cost and Purchase Size as of 2026-08-13 --
+    this ingredient is expected to get real cost data eventually). pandas
+    reads blank numeric CSV cells as NaN, so cost_per_recipe_unit must
+    return None rather than propagating NaN math.
+    """
+    result = cost_per_recipe_unit(
+        purchase_cost=float("nan"),
+        purchase_size=float("nan"),
+        purchase_unit="Powder",
+        recipe_unit="Powder"
+    )
+
+    assert result is None
+
 def test_calculate_ingredient_cost_oat_milk() -> None:
     """
     Oat milk ingredient cost test in Peanut Butter Banana.
