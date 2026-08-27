@@ -1,7 +1,4 @@
-# Ingredient Database works alone, Recipe Sheet needs ingredient Database,
-# Menu Items needs both, double removed
-
-import math
+import pandas as pd
 
 
 def cost_per_recipe_unit(purchase_cost: float, purchase_size: float, purchase_unit: str, recipe_unit: str) -> float | None:
@@ -12,7 +9,7 @@ def cost_per_recipe_unit(purchase_cost: float, purchase_size: float, purchase_un
     Returns None if purchase_cost or purchase_size is blank (NaN), since the
     ingredient database is sparse and missing cost data can't be computed.
     """
-    if math.isnan(purchase_cost) or math.isnan(purchase_size):
+    if pd.isna(purchase_cost) or pd.isna(purchase_size) or purchase_size == 0:
         return None
 
     factor  = 1
@@ -32,8 +29,40 @@ def calculate_ingredient_cost(amount_used: float, cost_per_recipe_unit: float) -
     """
     return amount_used * cost_per_recipe_unit
 
-def build_ingredient_costs(): # TODO
-    pass
+def build_ingredient_costs(menu_item: str, recipe_sheet: pd.DataFrame, ingredient_database: pd.DataFrame) -> dict:
+    """
+    Builds a dictionary of ingredient costs for a menu item.
+    """
+    ingredient_costs = {"costs": [], "missing_ingredients": []}
+    recipe = recipe_sheet[recipe_sheet["Menu Item"] == menu_item]
+
+    for _, row in recipe.iterrows():
+        ingredient = row["Ingredient"]
+        amount_used = row["Amount Used"]
+        ingredient_category = row["Category"]
+
+        match = ingredient_database.loc[(ingredient_database["Ingredient"] == ingredient) & (ingredient_database["Category"] == ingredient_category)]
+        if match.empty:
+            ingredient_costs["missing_ingredients"].append(ingredient)
+            continue
+
+        row_data = match.iloc[0]
+        purchase_cost = float(row_data["Purchase Cost"])
+        purchase_size = float(row_data["Purchase Size"])
+        purchase_unit = str(row_data["Purchase Unit"])
+        recipe_unit = str(row_data["Recipe Unit"])
+
+        cost_per_unit = cost_per_recipe_unit(purchase_cost, purchase_size, purchase_unit, recipe_unit)
+        if cost_per_unit is not None:
+            ingredient_cost = calculate_ingredient_cost(amount_used, cost_per_unit)
+            ingredient_costs["costs"].append(ingredient_cost)
+        else:
+            ingredient_costs["missing_ingredients"].append(ingredient)
+
+    return ingredient_costs
+
+
+
 
 def calculate_total_ingredient_cost(ingredient_costs: list[float]) -> float:
     """
