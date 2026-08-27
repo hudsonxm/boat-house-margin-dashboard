@@ -30,24 +30,31 @@ row_and_ride_dashboard/
 ├── requirements.txt
 └── README.md
 
-DONE — calculator.py, all six functions implemented with passing pytest tests:
-- cost_per_recipe_unit(purchase_cost, purchase_size, purchase_unit, recipe_unit) -> float
+DONE — calculator.py is complete, all functions implemented with passing pytest tests:
+- cost_per_recipe_unit(purchase_cost, purchase_size, purchase_unit, recipe_unit) -> float | None — returns None if purchase_cost or purchase_size is NaN (guarded via pd.isna, once, at the top)
 - calculate_ingredient_cost(amount_used, cost_per_recipe_unit) -> float
+- build_ingredient_costs(menu_item, recipe_sheet, ingredient_database) -> dict — the glue function. Filters recipe_sheet to menu_item's rows, joins each row to ingredient_database on Ingredient + Category (recipe_sheet calls this column "Ingredient Category", ingredient_database calls it "Category" — don't typo this again), calls cost_per_recipe_unit then calculate_ingredient_cost, and routes any unmatched ingredient or None cost into missing_ingredients instead of costs. Returns {"costs": list[float], "missing_ingredients": list[str]}.
 - calculate_total_ingredient_cost(ingredient_costs: list[float]) -> float
 - calculate_gross_profit(selling_price, total_ingredient_cost) -> float
 - calculate_margin_percent(gross_profit, selling_price) -> float
 - calculate_food_cost(margin_percent) -> float
 
-IN PROGRESS — the "glue" function (name TBD: build_ingredient_costs or get_recipe_costs_for_item). Sits between calculate_ingredient_cost and calculate_total_ingredient_cost. Signature not written yet. Should:
-1. Take a menu item name + recipe sheet DataFrame + ingredient database DataFrame
-2. Filter recipe sheet to that menu item's rows
-3. Loop rows (iterrows() is fine — pilot dataset is tiny; vectorize later if ever needed), calling cost_per_recipe_unit then calculate_ingredient_cost per row
-4. Intercept None (missing cost data) HERE rather than letting it propagate
-5. Return a dict: {"costs": list[float], "missing_ingredients": list[str]}
+Known landmine NOT yet fixed (deliberately deferred to data_loader.py): Purchase Cost (and recipe_sheet's Ingredient Cost) are stored as currency strings like "$32.93" in the raw CSVs. pd.read_csv loads these as strings, so build_ingredient_costs's float(row_data["Purchase Cost"]) will raise ValueError until data_loader.py strips the "$" and casts to float before handing DataFrames to calculator.py. calculator.py intentionally does no currency cleaning itself — that's data_loader.py's job, not calculator.py's.
 
-TODO next: cost_per_recipe_unit needs a guard to actually return None on blank/NaN purchase cost (currently unhandled), plus a test using a blank-cost row from the full database (e.g. Collagen, Matcha).
+test_calculator.py's build_ingredient_costs tests use hand-constructed, already-clean DataFrames rather than pd.read_csv on the pilot CSVs — they're unit tests of the join/missing-data logic, isolated from data_loader.py's (not-yet-written) cleaning. TODO once data_loader.py exists: add a separate end-to-end test that loads the real pilot CSVs through it and runs every pilot menu item through the full calculator.py pipeline, checking totals against the known hand-calculated margins.
 
-TODO after that: data_loader.py (CSV loading + validation), then app.py (Streamlit MVP: upload → margin report). Stretch goal: in-app persistent editing saved back to CSV.
+TODO next: data_loader.py (CSV loading + validation), then app.py (Streamlit MVP: upload → margin report). Stretch goal: in-app persistent editing saved back to CSV.
+
+data_loader.py spec (NOT STARTED):
+Job is loading + cleaning + validating only — no margin/cost math, that boundary stays in calculator.py.
+1. Load the 3 CSVs — from a local path for dev/testing, from a Streamlit-uploaded file object in the app (pd.read_csv handles both the same way).
+2. Clean currency/percent-formatted columns (strip "$" and "%", cast to float):
+   - ingredient_database.csv: Purchase Cost is "$28.82"-style strings (Purchase Size is already clean numeric).
+   - menu_items.csv: Selling Price is "$12.00"-style — this is the only menu_items column calculator.py needs as an input.
+   - menu_items.csv's Total Ingredient Cost/Gross Profit/Margin %/Food Cost and recipe_sheet.csv's Ingredient Cost are the old hand-calculated columns the architecture decision already says become computed outputs — cleaning them is optional/for-comparison-later, not required for the pipeline to run.
+3. Leave genuinely blank cells as NaN (pandas' default) — don't fill or guess, per the missing-data policy. The only real work is not breaking on a column that mixes NaN and "$X.XX" strings.
+4. Validate required columns are present per CSV (e.g. ingredient_database needs Ingredient, Category, Purchase Size, Purchase Unit, Purchase Cost, Recipe Unit) and raise/report something clear on schema drift, rather than a cryptic KeyError three layers deep in calculator.py.
+Open design question: one function per CSV (load_ingredient_database(path), load_recipe_sheet(path), load_menu_items(path), each doing read+clean+validate for its own schema) vs. one generic loader plus a shared strip_currency(series) helper reused across all three. Leaning toward one-function-per-CSV + shared helper since each file's cleaning needs differ, but not decided.
 
 Conventions:
 - Test-first: write the pytest test against known pilot CSV values before implementing the function body

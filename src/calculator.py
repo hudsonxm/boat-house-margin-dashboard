@@ -39,7 +39,7 @@ def build_ingredient_costs(menu_item: str, recipe_sheet: pd.DataFrame, ingredien
     for _, row in recipe.iterrows():
         ingredient = row["Ingredient"]
         amount_used = row["Amount Used"]
-        ingredient_category = row["Category"]
+        ingredient_category = row["Ingredient Category"]
 
         match = ingredient_database.loc[(ingredient_database["Ingredient"] == ingredient) & (ingredient_database["Category"] == ingredient_category)]
         if match.empty:

@@ -1,6 +1,8 @@
+import pandas as pd
 from pytest import approx
 from src.calculator import cost_per_recipe_unit
 from src.calculator import calculate_ingredient_cost
+from src.calculator import build_ingredient_costs
 from src.calculator import calculate_total_ingredient_cost
 from src.calculator import calculate_gross_profit
 from src.calculator import calculate_margin_percent
@@ -73,6 +75,70 @@ def test_calculate_ingredient_cost_oat_milk() -> None:
     )
 
     assert result == approx(0.858, abs=0.0001)
+
+def test_build_ingredient_costs_peanut_butter_banana() -> None:
+    """
+    Happy-path test for the glue function: given Peanut Butter Banana's
+    recipe rows and a clean (already-numeric) ingredient database, costs
+    should match the pilot sheet's known per-ingredient values with no
+    missing ingredients.
+    """
+    recipe_sheet = pd.DataFrame([
+        {"Menu Item": "Peanut Butter Banana", "Ingredient": "Oat Milk", "Ingredient Category": "Milk", "Amount Used": 10},
+        {"Menu Item": "Peanut Butter Banana", "Ingredient": "Vanilla Protein", "Ingredient Category": "Powder", "Amount Used": 0.8},
+        {"Menu Item": "Peanut Butter Banana", "Ingredient": "PB2", "Ingredient Category": "Powder", "Amount Used": 0.41},
+        {"Menu Item": "Peanut Butter Banana", "Ingredient": "Peanut Butter", "Ingredient Category": "Spread", "Amount Used": 1},
+        {"Menu Item": "Peanut Butter Banana", "Ingredient": "Vanilla Extract", "Ingredient Category": "Extract", "Amount Used": 1.5},
+        {"Menu Item": "Peanut Butter Banana", "Ingredient": "Honey", "Ingredient Category": "Sweetener", "Amount Used": 0.5},
+        {"Menu Item": "Peanut Butter Banana", "Ingredient": "Bananas", "Ingredient Category": "Frozen Fruit", "Amount Used": 4.8},
+        {"Menu Item": "Peanut Butter Banana", "Ingredient": "Coconut Cubes", "Ingredient Category": "Prepared Ingredient", "Amount Used": 3},
+        {"Menu Item": "Peanut Butter Banana", "Ingredient": "20oz Branded Cup", "Ingredient Category": "Packaging", "Amount Used": 1},
+        {"Menu Item": "Peanut Butter Banana", "Ingredient": "20oz Lid", "Ingredient Category": "Packaging", "Amount Used": 1},
+        {"Menu Item": "Peanut Butter Banana", "Ingredient": "Smoothie Straw", "Ingredient Category": "Packaging", "Amount Used": 1},
+    ])
+
+    ingredient_database = pd.DataFrame([
+        {"Ingredient": "Oat Milk", "Category": "Milk", "Purchase Size": 384, "Purchase Unit": "fl oz", "Purchase Cost": 32.93, "Recipe Unit": "fl oz"},
+        {"Ingredient": "Vanilla Protein", "Category": "Powder", "Purchase Size": 2.03, "Purchase Unit": "lbs", "Purchase Cost": 29.59, "Recipe Unit": "oz"},
+        {"Ingredient": "PB2", "Category": "Powder", "Purchase Size": 2, "Purchase Unit": "lbs", "Purchase Cost": 17.94, "Recipe Unit": "oz"},
+        {"Ingredient": "Peanut Butter", "Category": "Spread", "Purchase Size": 30, "Purchase Unit": "lbs", "Purchase Cost": 77.95, "Recipe Unit": "oz"},
+        {"Ingredient": "Vanilla Extract", "Category": "Extract", "Purchase Size": 946, "Purchase Unit": "ml", "Purchase Cost": 8.99, "Recipe Unit": "ml"},
+        {"Ingredient": "Honey", "Category": "Sweetener", "Purchase Size": 2.5, "Purchase Unit": "lbs", "Purchase Cost": 8.49, "Recipe Unit": "oz"},
+        {"Ingredient": "Bananas", "Category": "Frozen Fruit", "Purchase Size": 20, "Purchase Unit": "lbs", "Purchase Cost": 28.82, "Recipe Unit": "oz"},
+        {"Ingredient": "Coconut Cubes", "Category": "Prepared Ingredient", "Purchase Size": 14, "Purchase Unit": "cubes", "Purchase Cost": 2.03, "Recipe Unit": "cube"},
+        {"Ingredient": "20oz Branded Cup", "Category": "Packaging", "Purchase Size": 1000, "Purchase Unit": "each", "Purchase Cost": 295.82, "Recipe Unit": "each"},
+        {"Ingredient": "20oz Lid", "Category": "Packaging", "Purchase Size": 1000, "Purchase Unit": "each", "Purchase Cost": 33.36, "Recipe Unit": "each"},
+        {"Ingredient": "Smoothie Straw", "Category": "Packaging", "Purchase Size": 2000, "Purchase Unit": "each", "Purchase Cost": 44.30, "Recipe Unit": "each"},
+    ])
+
+    result = build_ingredient_costs("Peanut Butter Banana", recipe_sheet, ingredient_database)
+
+    assert result["missing_ingredients"] == []
+    assert result["costs"] == approx(
+        [0.8576, 0.7288, 0.2299, 0.1624, 0.0143, 0.1061, 0.4323, 0.4350, 0.2958, 0.0334, 0.0222],
+        abs=0.0001
+    )
+
+def test_build_ingredient_costs_missing_ingredient() -> None:
+    """
+    An ingredient present in the recipe sheet but absent from the
+    ingredient database (e.g. not yet added, or a Category mismatch) should
+    be flagged in missing_ingredients rather than raising or silently
+    skipping -- per the missing-data policy, nothing here should be
+    treated as $0.00.
+    """
+    recipe_sheet = pd.DataFrame([
+        {"Menu Item": "Test Item", "Ingredient": "Mystery Ingredient", "Ingredient Category": "Unknown", "Amount Used": 1},
+    ])
+
+    ingredient_database = pd.DataFrame([
+        {"Ingredient": "Oat Milk", "Category": "Milk", "Purchase Size": 384, "Purchase Unit": "fl oz", "Purchase Cost": 32.93, "Recipe Unit": "fl oz"},
+    ])
+
+    result = build_ingredient_costs("Test Item", recipe_sheet, ingredient_database)
+
+    assert result["costs"] == []
+    assert result["missing_ingredients"] == ["Mystery Ingredient"]
 
 def test_calculate_total_ingredient_cost_peanut_butter_banana() -> None:
     """
