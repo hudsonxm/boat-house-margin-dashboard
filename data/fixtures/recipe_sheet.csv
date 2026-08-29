@@ -1,0 +1,42 @@
+Menu Item,Ingredient ID,Ingredient,Ingredient Category,Amount Used,Recipe Unit,Notes
+Peanut Butter Banana,MLK-OAT_MILK,Oat Milk,Milk,10,fl oz,
+Peanut Butter Banana,PWD-VANILLA_PROTEIN,Vanilla Protein,Powder,0.8,oz,1 scoop
+Peanut Butter Banana,PWD-PB2,PB2,Powder,0.41,oz,1 scoop
+Peanut Butter Banana,SPR-PEANUT_BUTTER,Peanut Butter,Spread,1,oz,1 scoop
+Peanut Butter Banana,EXT-VANILLA_EXTRACT,Vanilla Extract,Extract,1.5,ml,
+Peanut Butter Banana,SWT-HONEY,Honey,Sweetener,0.5,oz,2 circles
+Peanut Butter Banana,FRZ-BANANAS,Bananas,Frozen Fruit,4.8,oz,2/3 beaker
+Peanut Butter Banana,PRP-COCONUT_CUBES,Coconut Cubes,Prepared Ingredient,3,cube,
+Peanut Butter Banana,PKG-20OZ_BRANDED_CUP,20oz Branded Cup,Packaging,1,each,
+Peanut Butter Banana,PKG-20OZ_LID,20oz Lid,Packaging,1,each,
+Peanut Butter Banana,PKG-SMOOTHIE_STRAW,Smoothie Straw,Packaging,1,each,
+Cold Brew Bliss,BEV-COLD_BREW,Cold Brew,Beverage Base,6,fl oz,
+Cold Brew Bliss,MLK-ALMOND_MILK,Almond Milk,Milk,4,fl oz,
+Cold Brew Bliss,PWD-COFFEE_PROTEIN,Coffee Protein,Powder,0.8,oz,1 scoop
+Cold Brew Bliss,PWD-PB2,PB2,Powder,0.41,oz,1 scoop
+Cold Brew Bliss,TOP-CACAO_NIBS,Cacao Nibs,Topping,0.6,oz,1 scoop
+Cold Brew Bliss,SPR-PEANUT_BUTTER,Peanut Butter,Spread,0.6,oz,1 scoop
+Cold Brew Bliss,FRZ-BANANAS,Bananas,Frozen Fruit,3.6,oz,1/2 beaker
+Cold Brew Bliss,PRP-COCONUT_CUBES,Coconut Cubes,Prepared Ingredient,5,cube,
+Cold Brew Bliss,PKG-20OZ_BRANDED_CUP,20oz Branded Cup,Packaging,1,each,
+Cold Brew Bliss,PKG-20OZ_LID,20oz Lid,Packaging,1,each,
+Cold Brew Bliss,PKG-SMOOTHIE_STRAW,Smoothie Straw,Packaging,1,each,
+Shark Bite,BEV-ICED_TEA,Iced Tea,Beverage Base,3,fl oz,
+Shark Bite,PWD-ZIPFIZZ,Zipfizz,Powder,1,each,
+Shark Bite,PWD-POWER_TEA_FLAVORS,Power Tea Flavors,Powder,0.3,oz,
+Shark Bite,PKG-32OZ_BRANDED_CUP,32oz Branded Cup,Packaging,1,each,
+Shark Bite,PKG-32OZ_LID,32oz Lid,Packaging,1,each,
+Shark Bite,PKG-POWER_TEA_STRAW,Power Tea Straw,Packaging,1,each,
+Acai Mixed Berry Bowl,MLK-OAT_MILK,Oat Milk,Milk,4,fl oz,
+Acai Mixed Berry Bowl,FRZ-STRAWBERRIES,Strawberries,Frozen Fruit,2.7,oz,1/3 beaker
+Acai Mixed Berry Bowl,FRZ-BLUEBERRIES,Blueberries,Frozen Fruit,2.8,oz,1/3 beaker
+Acai Mixed Berry Bowl,PWD-VANILLA_PROTEIN,Vanilla Protein,Powder,0.8,oz,
+Acai Mixed Berry Bowl,PWD-ACAI,Acai,Powder,0.1,oz,
+Acai Mixed Berry Bowl,SWT-AGAVE,Agave,Sweetener,0.5,oz,
+Acai Mixed Berry Bowl,TOP-GRANOLA,Granola,Topping,2.2,oz,4 scoops
+Acai Mixed Berry Bowl,SPR-NUTELLA,Nutella,Spread,0.7,oz,
+Acai Mixed Berry Bowl,FSH-BANANAS,Bananas,Fresh Fruit,2,oz,
+Acai Mixed Berry Bowl,FSH-BLUEBERRIES,Blueberries,Fresh Fruit,1,oz,
+Acai Mixed Berry Bowl,PKG-16OZ_ACAI_BOWL,16oz Acai Bowl,Packaging,1,each,
+Acai Mixed Berry Bowl,PKG-16OZ_ACAI_BOWL_LID,16oz Acai Bowl Lid,Packaging,1,each,
+Acai Mixed Berry Bowl,PKG-SPOON,Spoon,Packaging,1,each,

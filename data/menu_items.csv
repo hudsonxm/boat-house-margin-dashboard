@@ -1,5 +1,67 @@
-Menu Item,Menu Item Category,Selling Price,Total Ingredient Cost,Gross Profit,Margin %,Food Cost,Notes
-Peanut Butter Banana,Smoothie,$12.00,$3.32,$8.68,72.35%,27.65%,
-Cold Brew Bliss,Smoothie,$12.00,$4.13,$7.87,65.57%,34.43%,
-Shark Bite,Power Tea,$9.00,$1.97,$7.03,78.06%,21.94%,
-Acai Mixed Berry Bowl,Bowl,$12.00,$4.40,$7.60,63.35%,36.65%,
+Menu Item,Menu Item Category,Available At,Selling Price,Notes
+Blueberry Shortcake,Seaside Smoothie,Both,$12.00,
+Chocolate Peanut Butter,Seaside Smoothie,Both,$12.00,
+Chocolate Strawberry,Seaside Smoothie,Both,$12.00,
+Cold Brew Bliss,Seaside Smoothie,Both,$12.00,
+Heavenly Hazelnut,Seaside Smoothie,Both,$12.00,
+Matcha Mango,Seaside Smoothie,Both,$12.00,
+Mint Chocolate Chip,Seaside Smoothie,Both,$12.00,
+Peanut Butter Banana,Seaside Smoothie,Both,$12.00,
+Pineapple Colada,Seaside Smoothie,Both,$12.00,
+Strawberry Banana,Seaside Smoothie,Both,$12.00,
+Sweet Greens,Seaside Smoothie,Both,$12.00,
+Tropical Paradise,Seaside Smoothie,Both,$12.00,
+Orange Creamsicle,Seaside Smoothie,Both,$12.00,seasonal - currently in season
+Acai Mixed Berry Bowl,Beach Bowl,Both,$13.90,includes any 4 toppings
+Banana Bowl,Beach Bowl,Both,$13.90,includes any 4 toppings
+Coconut Bowl,Beach Bowl,Both,$13.90,includes any 4 toppings
+Pineapple Mango Bowl,Beach Bowl,Both,$13.90,includes any 4 toppings
+Strawberry Bowl,Beach Bowl,Both,$13.90,includes any 4 toppings
+Oatmeal Bowl,Beach Bowl,Both,$13.90,includes any 4 toppings
+Yogurt Bowl,Beach Bowl,Both,$13.90,includes any 4 toppings
+Mermaid,Portside Power Tea,Both,$9.00,
+Cherry Beach Pop,Portside Power Tea,Both,$9.00,
+Watermelon Waves,Portside Power Tea,Both,$9.00,
+Shark Bite,Portside Power Tea,Both,$9.00,
+Razz Margarita,Portside Power Tea,Both,$9.00,
+Mojito,Portside Power Tea,Both,$9.00,
+Watermelon Mint,Portside Power Tea,Both,$9.00,
+Melon Breeze,Portside Power Tea,Both,$9.00,
+Orange Lime Rickey,Portside Power Tea,Both,$9.00,
+Island Pineapple,Portside Power Tea,Both,$9.00,
+Cucumber Lime Mint,Portside Power Tea,Both,$9.00,
+Malibu Sunset,Portside Power Tea,Both,$9.00,
+Peach Mango Margarita,Portside Power Tea,Both,$9.00,
+Iced Tea,Boardwalk Chiller,Both,$8.00,
+Arnold Palmer,Boardwalk Chiller,Both,$8.00,
+Blueberry Lemon Iced Tea,Boardwalk Chiller,Both,$8.00,
+Pink Flamingo,Boardwalk Chiller,Both,$8.00,
+Strawberry Acai Lemonade,Boardwalk Chiller,Both,$8.00,
+Glow Getter Collagen,Boardwalk Chiller,Both,$8.00,
+Avocado Greens,Toast,Both,$8.00,
+The Hot Date,Toast,Both,$8.00,
+Berry Nutella,Toast,Both,$8.00,
+Healthy Hummus,Toast,Both,$8.00,
+Peanut Butter Banana & Honey,Toast,Both,$8.00,
+Chocolate Peanut Butter Chip Buoys,Buoy Bites,Both,$6.00,2 buoys per serving
+Almond Joy Buoys,Buoy Bites,Both,$6.00,2 buoys per serving
+Topping: Almond Butter,Topping,Both,$1.50,upcharge applies from 5th topping onward; first 4 included in bowl
+Topping: Almonds,Topping,Both,$1.50,upcharge applies from 5th topping onward; first 4 included in bowl
+Topping: Avocado,Topping,Both,$1.50,upcharge applies from 5th topping onward; first 4 included in bowl
+Topping: Banana,Topping,Both,$1.50,upcharge applies from 5th topping onward; first 4 included in bowl
+Topping: Blueberries,Topping,Both,$1.50,upcharge applies from 5th topping onward; first 4 included in bowl
+Topping: Cacao Nibs,Topping,Both,$1.50,upcharge applies from 5th topping onward; first 4 included in bowl
+Topping: Chia Seeds,Topping,Both,$1.50,upcharge applies from 5th topping onward; first 4 included in bowl
+Topping: Chocolate Chips,Topping,Both,$1.50,upcharge applies from 5th topping onward; first 4 included in bowl
+Topping: Coconut,Topping,Both,$1.50,upcharge applies from 5th topping onward; first 4 included in bowl
+Topping: Collagen,Topping,Both,$1.50,upcharge applies from 5th topping onward; first 4 included in bowl
+Topping: Dates,Topping,Both,$1.50,upcharge applies from 5th topping onward; first 4 included in bowl
+Topping: Flax Seeds,Topping,Both,$1.50,upcharge applies from 5th topping onward; first 4 included in bowl
+Topping: Goji Berries,Topping,Both,$1.50,upcharge applies from 5th topping onward; first 4 included in bowl
+Topping: Nutella,Topping,Both,$1.50,upcharge applies from 5th topping onward; first 4 included in bowl
+Topping: Peanut Butter,Topping,Both,$1.50,upcharge applies from 5th topping onward; first 4 included in bowl
+Topping: Pineapple,Topping,Both,$1.50,upcharge applies from 5th topping onward; first 4 included in bowl
+Topping: Spinach,Topping,Both,$1.50,upcharge applies from 5th topping onward; first 4 included in bowl
+Topping: Spirulina,Topping,Both,$1.50,upcharge applies from 5th topping onward; first 4 included in bowl
+Topping: Strawberries,Topping,Both,$1.50,upcharge applies from 5th topping onward; first 4 included in bowl
+Topping: Walnuts,Topping,Both,$1.50,upcharge applies from 5th topping onward; first 4 included in bowl

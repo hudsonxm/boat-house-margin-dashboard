@@ -1,0 +1,42 @@
+Menu Item,Ingredient ID,Expected Ingredient Cost
+Peanut Butter Banana,MLK-OAT_MILK,$0.8576
+Peanut Butter Banana,PWD-VANILLA_PROTEIN,$0.7288
+Peanut Butter Banana,PWD-PB2,$0.2299
+Peanut Butter Banana,SPR-PEANUT_BUTTER,$0.1624
+Peanut Butter Banana,EXT-VANILLA_EXTRACT,$0.0143
+Peanut Butter Banana,SWT-HONEY,$0.1061
+Peanut Butter Banana,FRZ-BANANAS,$0.4323
+Peanut Butter Banana,PRP-COCONUT_CUBES,$0.4350
+Peanut Butter Banana,PKG-20OZ_BRANDED_CUP,$0.2958
+Peanut Butter Banana,PKG-20OZ_LID,$0.0334
+Peanut Butter Banana,PKG-SMOOTHIE_STRAW,$0.0222
+Cold Brew Bliss,BEV-COLD_BREW,$0.7497
+Cold Brew Bliss,MLK-ALMOND_MILK,$0.3853
+Cold Brew Bliss,PWD-COFFEE_PROTEIN,$0.5567
+Cold Brew Bliss,PWD-PB2,$0.2299
+Cold Brew Bliss,TOP-CACAO_NIBS,$0.7123
+Cold Brew Bliss,SPR-PEANUT_BUTTER,$0.0974
+Cold Brew Bliss,FRZ-BANANAS,$0.3242
+Cold Brew Bliss,PRP-COCONUT_CUBES,$0.7250
+Cold Brew Bliss,PKG-20OZ_BRANDED_CUP,$0.2958
+Cold Brew Bliss,PKG-20OZ_LID,$0.0334
+Cold Brew Bliss,PKG-SMOOTHIE_STRAW,$0.0222
+Shark Bite,BEV-ICED_TEA,$0.0282
+Shark Bite,PWD-ZIPFIZZ,$1.0790
+Shark Bite,PWD-POWER_TEA_FLAVORS,$0.3667
+Shark Bite,PKG-32OZ_BRANDED_CUP,$0.4208
+Shark Bite,PKG-32OZ_LID,$0.0559
+Shark Bite,PKG-POWER_TEA_STRAW,$0.0244
+Acai Mixed Berry Bowl,MLK-OAT_MILK,$0.3430
+Acai Mixed Berry Bowl,FRZ-STRAWBERRIES,$0.3846
+Acai Mixed Berry Bowl,FRZ-BLUEBERRIES,$0.5101
+Acai Mixed Berry Bowl,PWD-VANILLA_PROTEIN,$0.7288
+Acai Mixed Berry Bowl,PWD-ACAI,$0.4163
+Acai Mixed Berry Bowl,SWT-AGAVE,$0.1113
+Acai Mixed Berry Bowl,TOP-GRANOLA,$0.9345
+Acai Mixed Berry Bowl,SPR-NUTELLA,$0.2350
+Acai Mixed Berry Bowl,FSH-BANANAS,$0.0621
+Acai Mixed Berry Bowl,FSH-BLUEBERRIES,$0.2661
+Acai Mixed Berry Bowl,PKG-16OZ_ACAI_BOWL,$0.2345
+Acai Mixed Berry Bowl,PKG-16OZ_ACAI_BOWL_LID,$0.1499
+Acai Mixed Berry Bowl,PKG-SPOON,$0.0223
