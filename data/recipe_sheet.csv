@@ -6,7 +6,7 @@ Peanut Butter Banana,SPR-PEANUT_BUTTER,Peanut Butter,Spread,1,oz,1 scoop
 Peanut Butter Banana,EXT-VANILLA_EXTRACT,Vanilla Extract,Extract,1.5,ml,
 Peanut Butter Banana,SWT-HONEY,Honey,Sweetener,0.5,oz,2 circles
 Peanut Butter Banana,FRZ-BANANAS,Bananas,Frozen Fruit,4.8,oz,2/3 beaker
-Peanut Butter Banana,PRP-COCONUT_CUBES,Coconut Cubes,Prepared Ingredient,3,cube,
+Peanut Butter Banana,PRP-COCONUT_CUBES,Coconut Cubes,Prepared Ingredient,3,cubes,
 Peanut Butter Banana,PKG-20OZ_BRANDED_CUP,20oz Branded Cup,Packaging,1,each,
 Peanut Butter Banana,PKG-20OZ_LID,20oz Lid,Packaging,1,each,
 Peanut Butter Banana,PKG-SMOOTHIE_STRAW,Smoothie Straw,Packaging,1,each,
@@ -17,7 +17,7 @@ Cold Brew Bliss,PWD-PB2,PB2,Powder,0.41,oz,1 scoop
 Cold Brew Bliss,TOP-CACAO_NIBS,Cacao Nibs,Topping,0.6,oz,1 scoop
 Cold Brew Bliss,SPR-PEANUT_BUTTER,Peanut Butter,Spread,1,oz,1 scoop (corrected from 0.6 - sheet error)
 Cold Brew Bliss,FRZ-BANANAS,Bananas,Frozen Fruit,3.6,oz,1/2 beaker
-Cold Brew Bliss,PRP-COCONUT_CUBES,Coconut Cubes,Prepared Ingredient,5,cube,
+Cold Brew Bliss,PRP-COCONUT_CUBES,Coconut Cubes,Prepared Ingredient,5,cubes,
 Cold Brew Bliss,PKG-20OZ_BRANDED_CUP,20oz Branded Cup,Packaging,1,each,
 Cold Brew Bliss,PKG-20OZ_LID,20oz Lid,Packaging,1,each,
 Cold Brew Bliss,PKG-SMOOTHIE_STRAW,Smoothie Straw,Packaging,1,each,
@@ -79,7 +79,7 @@ Heavenly Hazelnut,SYR-CHOCOLATE_SAUCE,Chocolate Sauce,Syrup,0.25,fl oz,EST - 1 p
 Heavenly Hazelnut,SYR-TORANI_HAZELNUT,Torani Hazelnut,Syrup,0.5,fl oz,EST - 2 pumps
 Heavenly Hazelnut,SWT-AGAVE,Agave,Sweetener,0.25,oz,1 circle
 Heavenly Hazelnut,FRZ-BANANAS,Bananas,Frozen Fruit,3.6,oz,1/2 beaker
-Heavenly Hazelnut,PRP-COCONUT_CUBES,Coconut Cubes,Prepared Ingredient,4.0,cube,
+Heavenly Hazelnut,PRP-COCONUT_CUBES,Coconut Cubes,Prepared Ingredient,4.0,cubes,
 Heavenly Hazelnut,PKG-20OZ_BRANDED_CUP,20oz Branded Cup,Packaging,1.0,each,
 Heavenly Hazelnut,PKG-20OZ_LID,20oz Lid,Packaging,1.0,each,
 Heavenly Hazelnut,PKG-SMOOTHIE_STRAW,Smoothie Straw,Packaging,1.0,each,
@@ -101,7 +101,7 @@ Mint Chocolate Chip,PWD-SPIRULINA,Spirulina,Powder,0.07,oz,1 scoop @ 1/4 tbsp
 Mint Chocolate Chip,EXT-MINT_EXTRACT,Mint Extract,Extract,1.0,ml,2 full droppers
 Mint Chocolate Chip,VEG-SPINACH,Spinach,Vegetable,0.28,oz,EST - 8 leaves
 Mint Chocolate Chip,FRZ-BANANAS,Bananas,Frozen Fruit,7.2,oz,1 beaker
-Mint Chocolate Chip,PRP-COCONUT_CUBES,Coconut Cubes,Prepared Ingredient,2.0,cube,
+Mint Chocolate Chip,PRP-COCONUT_CUBES,Coconut Cubes,Prepared Ingredient,2.0,cubes,
 Mint Chocolate Chip,TOP-CHOCOLATE_CHIPS,Chocolate Chips,Topping,0.75,oz,"1 scoop, pulsed in"
 Mint Chocolate Chip,SYR-CHOCOLATE_SAUCE,Chocolate Sauce,Syrup,0.25,fl oz,EST - cup drizzle
 Mint Chocolate Chip,PKG-20OZ_BRANDED_CUP,20oz Branded Cup,Packaging,1.0,each,
@@ -113,7 +113,7 @@ Pineapple Colada,TOP-COCONUT_SHREDS,Coconut Shreds,Topping,0.5,oz,1 scoop blende
 Pineapple Colada,EXT-COCONUT_EXTRACT,Coconut Extract,Extract,1.0,ml,2 full droppers
 Pineapple Colada,SWT-AGAVE,Agave,Sweetener,0.25,oz,1 circle
 Pineapple Colada,FRZ-PINEAPPLE,Pineapple,Frozen Fruit,4.75,oz,1/2 beaker
-Pineapple Colada,PRP-COCONUT_CUBES,Coconut Cubes,Prepared Ingredient,6.0,cube,
+Pineapple Colada,PRP-COCONUT_CUBES,Coconut Cubes,Prepared Ingredient,6.0,cubes,
 Pineapple Colada,PKG-20OZ_BRANDED_CUP,20oz Branded Cup,Packaging,1.0,each,
 Pineapple Colada,PKG-20OZ_LID,20oz Lid,Packaging,1.0,each,
 Pineapple Colada,PKG-SMOOTHIE_STRAW,Smoothie Straw,Packaging,1.0,each,
@@ -154,7 +154,7 @@ Banana Bowl,PKG-16OZ_ACAI_BOWL,16oz Acai Bowl,Packaging,1.0,each,
 Banana Bowl,PKG-16OZ_ACAI_BOWL_LID,16oz Acai Bowl Lid,Packaging,1.0,each,
 Banana Bowl,PKG-SPOON,Spoon,Packaging,1.0,each,
 Coconut Bowl,MLK-COCONUT_MILK,Coconut Milk,Milk,4.0,fl oz,
-Coconut Bowl,PRP-COCONUT_CUBES,Coconut Cubes,Prepared Ingredient,6.0,cube,
+Coconut Bowl,PRP-COCONUT_CUBES,Coconut Cubes,Prepared Ingredient,6.0,cubes,
 Coconut Bowl,FRZ-PINEAPPLE,Pineapple,Frozen Fruit,7.12,oz,3/4 20oz cup
 Coconut Bowl,PWD-VANILLA_PROTEIN,Vanilla Protein,Powder,0.8,oz,1 scoop
 Coconut Bowl,TOP-COCONUT_SHREDS,Coconut Shreds,Topping,0.7,oz,2 scoops shredded coconut
@@ -316,7 +316,7 @@ Glow Getter Collagen,PKG-POWER_TEA_STRAW,Power Tea Straw,Packaging,1.0,each,
 Orange Creamsicle,DRS-ORANGE_JUICE,Orange Juice,Dressing,6.0,fl oz,6 oz
 Orange Creamsicle,MLK-COCONUT_MILK,Coconut Milk,Milk,4.0,fl oz,4 oz
 Orange Creamsicle,FRZ-MANGOES,Mangoes,Frozen Fruit,4.0,oz,1/2 20oz cup
-Orange Creamsicle,PRP-COCONUT_CUBES,Coconut Cubes,Prepared Ingredient,5.0,cube,5 cubes
+Orange Creamsicle,PRP-COCONUT_CUBES,Coconut Cubes,Prepared Ingredient,5.0,cubes,5 cubes
 Orange Creamsicle,PWD-VANILLA_PROTEIN,Vanilla Protein,Powder,0.8,oz,1 clear scoop
 Orange Creamsicle,EXT-VANILLA_EXTRACT,Vanilla Extract,Extract,1.5,ml,3 droppers
 Orange Creamsicle,SWT-AGAVE,Agave,Sweetener,0.5,oz,2 circles
