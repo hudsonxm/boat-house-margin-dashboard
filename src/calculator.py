@@ -11,19 +11,20 @@ def cost_per_recipe_unit(purchase_cost: float, purchase_size: float, purchase_un
         return None
 
     factor  = 1
-
     if purchase_unit == "lbs" and recipe_unit == "oz":
         factor = 16 # Standard unit conversion factor for pounds to ounces
     elif purchase_unit == "bags" and recipe_unit == "fl oz":
         factor = 16.88 # Row and Ride's estimated fl oz yield per tea bag
 
     return purchase_cost / (purchase_size * factor)
-    
+
+
 def calculate_ingredient_cost(amount_used: float, cost_per_recipe_unit: float) -> float:
     """
     Calculates the cost of an ingredient in a recipe.
     """
     return amount_used * cost_per_recipe_unit
+
 
 def build_ingredient_costs(menu_item: str, recipe_sheet: pd.DataFrame, ingredient_database: pd.DataFrame) -> dict:
     """
@@ -55,8 +56,6 @@ def build_ingredient_costs(menu_item: str, recipe_sheet: pd.DataFrame, ingredien
             ingredient_costs["missing_ingredients"].append(ingredient_id)
 
     return ingredient_costs
-
-
 
 
 def calculate_total_ingredient_cost(ingredient_costs: list[float]) -> float:
