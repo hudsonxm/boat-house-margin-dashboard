@@ -6,6 +6,7 @@ from src.data_loader import load_ingredient_database
 from src.data_loader import load_menu_items
 from src.data_loader import load_recipe_sheet
 from src.data_loader import _validate_columns
+from src.data_loader import _parse_currency_column
 
 def test_strip_currency_preserve_nan():
     """
@@ -32,4 +33,23 @@ def test_validate_columns_raises_value_error():
 
     with pytest.raises(ValueError, match=re.escape(expected_msg)):
         _validate_columns(expected_df, expected_required, expected_csv_name)
+
+
+def test_parse_currency_column_raises_value_error():
+    """
+    _parse_currency_column() test on a menu items DataFrame with a
+    Selling Price data-entry typo ($9.0.0).
+    """
+
+    expected_df = pd.DataFrame([
+        {"Menu Item": "Mojito", "Menu Item Category": "Portside Power Tea", "Available At": "Both", "Selling Price": "$9.0.0", "Notes": float("nan")}
+    ])
+    expected_column = "Selling Price"
+    expected_csv_name = "Menu Items"
+    expected_bad = {0: "$9.0.0"}
+
+    expected_msg = f"{expected_csv_name} could not parse {expected_column} values: {list(expected_bad.values())}"
+
+    with pytest.raises(ValueError, match=re.escape(expected_msg)):
+        _parse_currency_column(expected_df, expected_column, expected_csv_name)
 
