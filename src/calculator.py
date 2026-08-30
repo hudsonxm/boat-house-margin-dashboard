@@ -4,8 +4,6 @@ import pandas as pd
 def cost_per_recipe_unit(purchase_cost: float, purchase_size: float, purchase_unit: str, recipe_unit: str) -> float | None:
     """
     Calculates purchase cost per recipe unit for an ingredient.
-    Data source: all params come from ingredient database
-    Location: Ingredient Database
     Returns None if purchase_cost or purchase_size is blank (NaN), since the
     ingredient database is sparse and missing cost data can't be computed.
     """
@@ -24,26 +22,23 @@ def cost_per_recipe_unit(purchase_cost: float, purchase_size: float, purchase_un
 def calculate_ingredient_cost(amount_used: float, cost_per_recipe_unit: float) -> float:
     """
     Calculates the cost of an ingredient in a recipe.
-    Data source: amount_used comes from recipe sheet, cost_per_recipe_unit comes from ingredient database
-    Location: Recipe Sheet
     """
     return amount_used * cost_per_recipe_unit
 
 def build_ingredient_costs(menu_item: str, recipe_sheet: pd.DataFrame, ingredient_database: pd.DataFrame) -> dict:
     """
-    Builds a dictionary of ingredient costs for a menu item.
+    Builds a dictionary of ingredient costs and missing ingredients (if applicable) for a menu item.
     """
     ingredient_costs = {"costs": [], "missing_ingredients": []}
     recipe = recipe_sheet[recipe_sheet["Menu Item"] == menu_item]
 
     for _, row in recipe.iterrows():
-        ingredient = row["Ingredient"]
+        ingredient_id = row["Ingredient ID"]
         amount_used = row["Amount Used"]
-        ingredient_category = row["Ingredient Category"]
 
-        match = ingredient_database.loc[(ingredient_database["Ingredient"] == ingredient) & (ingredient_database["Category"] == ingredient_category)]
+        match = ingredient_database.loc[ingredient_database["Ingredient ID"] == ingredient_id]
         if match.empty:
-            ingredient_costs["missing_ingredients"].append(ingredient)
+            ingredient_costs["missing_ingredients"].append(ingredient_id)
             continue
 
         row_data = match.iloc[0]
@@ -57,7 +52,7 @@ def build_ingredient_costs(menu_item: str, recipe_sheet: pd.DataFrame, ingredien
             ingredient_cost = calculate_ingredient_cost(amount_used, cost_per_unit)
             ingredient_costs["costs"].append(ingredient_cost)
         else:
-            ingredient_costs["missing_ingredients"].append(ingredient)
+            ingredient_costs["missing_ingredients"].append(ingredient_id)
 
     return ingredient_costs
 

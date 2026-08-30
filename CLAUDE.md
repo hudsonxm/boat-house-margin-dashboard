@@ -3,24 +3,32 @@ Project: Row and Ride Margins Dashboard
 Building a Python tool to replace a Google Sheets margin calculator for my mom's smoothie/bowl bar (Row and Ride / Boathouse Nutrition). It's also my resume project for co-op search (rising 2nd year, Northeastern).
 Goal: Streamlit dashboard where you upload 3 CSVs (ingredient database, recipe sheet, menu items) and it automatically calculates ingredient cost, gross profit, margin %, and food cost % per menu item — replacing manual spreadsheet math.
 
-Data schema (pilot CSVs already exist in /data):
-ingredient_database.csv: Ingredient, Category, Purchase Size, Purchase Unit, Purchase Cost, Cost Per Recipe Unit, Recipe Unit, Supplier, Last Updated, Notes. Full database is sparse (many blank cost rows). pilot_ingredient_database.csv is a separate copy containing only rows with complete cost data — used as the test fixture for calculator logic.
-recipe_sheet.csv: Menu Item, Ingredient, Ingredient Category, Amount Used, Recipe Unit, Ingredient Cost, Notes. Duplicate ingredient rows per menu item were consolidated manually for the pilot (e.g. Shark Bite's two Power Tea Flavors rows merged into one) — the code does NOT dedupe automatically yet.
-menu_items.csv: Menu Item, Menu Item Category, Selling Price, Total Ingredient Cost, Gross Profit, Margin %, Food Cost, Notes.
+Data schema (full CSVs live in /data; pinned test fixtures in /data/fixtures):
+ingredient_database.csv: Ingredient ID, Ingredient, Category, Purchase Size, Purchase Unit, Purchase Cost, Cost Per Recipe Unit, Recipe Unit, Supplier, Last Updated, Notes. Ingredient ID (e.g. FRZ-BANANAS, PKG-20OZ_LID) is the stable join key. The database is now fully populated — every row has cost data (many rows are supplier-estimated, flagged "EST" in Notes). No more pilot_ingredient_database.csv; the calculator's regression fixtures live in /data/fixtures/ instead.
+recipe_sheet.csv: Menu Item, Ingredient ID, Ingredient, Ingredient Category, Amount Used, Recipe Unit, Notes. Joins to ingredient_database on Ingredient ID. Duplicate ingredient rows per menu item were consolidated manually for the pilot (e.g. Shark Bite's two Power Tea Flavors rows merged into one) — the code does NOT dedupe automatically yet.
+menu_items.csv: Menu Item, Menu Item Category, Available At, Selling Price, Notes. The old Total Ingredient Cost / Gross Profit / Margin % / Food Cost columns have been removed from the file — they are computed outputs now, not stored.
 
-Key architecture decision: The cost/profit/margin/food-cost columns in menu_items.csv and the Ingredient Cost column in recipe_sheet.csv were previously hand-calculated in Sheets. In the Python tool these become computed outputs, not inputs — the engine recomputes Cost Per Recipe Unit from Purchase Cost / Purchase Size (rather than trusting the pre-filled column, which goes stale when prices change), multiplies by Amount Used from the recipe sheet, and derives everything else, so updating one ingredient price cascades everywhere automatically.
+/data/fixtures/ (pinned regression oracle for test_calculator.py — deliberately frozen, do NOT reconcile with /data):
+- ingredient_database.csv, recipe_sheet.csv, menu_items.csv: the 4 original pilot menu items (Peanut Butter Banana, Cold Brew Bliss, Shark Bite, Acai Mixed Berry Bowl) with the exact ingredient amounts, IDs, and prices that produced the hand-calculated margins. These diverge from /data on purpose (e.g. fixture Shark Bite draws 3 fl oz from BEV-ICED_TEA costed via the 16.88 fl oz/bag conversion; live data models brewed tea as its own PRP-BREWED_TEA ingredient. Fixture Acai bowl bakes 4 toppings into the recipe at $12.00; live menu_items prices it $13.90 with toppings as separate line items).
+- expected_ingredient_costs.csv: Menu Item, Ingredient ID, Expected Ingredient Cost ($-string) — per-row expected output, computed from unrounded Purchase Cost / Purchase Size.
+- expected_margins.csv: Menu Item, Expected Total Ingredient Cost, Expected Gross Profit, Expected Margin %, Expected Food Cost ($/%-strings, display-rounded — assert with tolerance ~1 cent, not exact).
+
+Key architecture decision: The cost/profit/margin/food-cost columns (previously hand-calculated in Sheets) are computed outputs, not inputs — the engine recomputes Cost Per Recipe Unit from Purchase Cost / Purchase Size (rather than trusting the pre-filled column, which goes stale when prices change), multiplies by Amount Used from the recipe sheet, and derives everything else, so updating one ingredient price cascades everywhere automatically. Those columns have now been deleted from menu_items.csv and recipe_sheet.csv entirely; the reference values for comparison live only in /data/fixtures/expected_*.csv.
+
+Known modeling gap (not yet handled): bowls sell at a price that "includes any 4 toppings", but the bowl rows in recipe_sheet.csv contain no toppings — so build_ingredient_costs currently undercounts a served bowl's cost and its margin looks artificially high. Needs a "base + included toppings" story before the bowl numbers are trustworthy.
 
 Unit conversion notes (in cost_per_recipe_unit):
-- lbs → oz uses factor 16 (standard unit conversion)
-- bags → fl oz uses factor 16.88 (Row and Ride's estimated fl oz yield per tea bag — a business assumption, NOT a universal conversion)
-- everything else falls through to factor 1 (oz→oz, fl oz→fl oz, each→each, ml→ml)
-- Known data-entry landmine: Coconut Cubes has Purchase Unit "cubes" vs Recipe Unit "cube" (plural/singular mismatch). Currently correct by accident via the factor-1 fallback. Units meant to be identical should match exactly.
+- lbs → oz uses factor 16 (standard unit conversion) — the workhorse conversion; used by all the bulk lbs-purchased items
+- bags → fl oz uses factor 16.88 (Row and Ride's estimated fl oz yield per tea bag — a business assumption, NOT a universal conversion). Now only exercised by /data/fixtures/ — the live database tracks Brewed Tea (PRP-BREWED_TEA) as its own prepared ingredient with a hand-entered batch cost, so nothing in /data/recipe_sheet.csv hits this branch. Keep it anyway for the regression fixtures.
+- everything else falls through to factor 1 (oz→oz, fl oz→fl oz, each→each, ml→ml, cubes→cubes). Across the whole current dataset, lbs→oz and the fixture-only bags→fl oz are the ONLY real conversions — every other row was entered with Purchase Unit == Recipe Unit.
+- FIXED (was a data-entry landmine): Coconut Cubes now has Purchase Unit "cubes" and Recipe Unit "cubes" matching exactly, so it hits the factor-1 path on purpose instead of by accident.
 
-Missing-data policy: When cost data is blank, cost_per_recipe_unit returns None. The None check happens ONCE, in the glue function — downstream math functions stay dumb and do not each check for None. Missing ingredients are flagged and surfaced in the UI, never silently skipped or treated as $0.00 (which would make margins look artificially good).
+Missing-data policy: When cost data is blank (NaN), cost_per_recipe_unit returns None. The None check happens ONCE, in the glue function — downstream math functions stay dumb and do not each check for None. Missing ingredients (unmatched Ingredient ID, or None cost) are flagged and surfaced in the UI, never silently skipped or treated as $0.00 (which would make margins look artificially good). The full database currently has no blank rows, so this path now guards newly-added-but-unpriced ingredients and mistyped IDs.
 
 Structure:
 row_and_ride_dashboard/
-├── data/              # pilot CSVs for local dev + test fixtures
+├── data/              # full CSVs for local dev
+│   └── fixtures/      # pinned 4-item pilot + expected_*.csv oracles for tests
 ├── src/
 │   ├── calculator.py  # pure functions: cost lookup, margin math
 │   └── data_loader.py # CSV validation/cleaning (not started)
@@ -33,15 +41,15 @@ row_and_ride_dashboard/
 DONE — calculator.py is complete, all functions implemented with passing pytest tests:
 - cost_per_recipe_unit(purchase_cost, purchase_size, purchase_unit, recipe_unit) -> float | None — returns None if purchase_cost or purchase_size is NaN (guarded via pd.isna, once, at the top)
 - calculate_ingredient_cost(amount_used, cost_per_recipe_unit) -> float
-- build_ingredient_costs(menu_item, recipe_sheet, ingredient_database) -> dict — the glue function. Filters recipe_sheet to menu_item's rows, joins each row to ingredient_database on Ingredient + Category (recipe_sheet calls this column "Ingredient Category", ingredient_database calls it "Category" — don't typo this again), calls cost_per_recipe_unit then calculate_ingredient_cost, and routes any unmatched ingredient or None cost into missing_ingredients instead of costs. Returns {"costs": list[float], "missing_ingredients": list[str]}.
+- build_ingredient_costs(menu_item, recipe_sheet, ingredient_database) -> dict — the glue function. Filters recipe_sheet to menu_item's rows, joins each row to ingredient_database on Ingredient ID (single stable key — replaced the old Ingredient + Category composite join, which was fragile on plural/singular and name-typo mismatches), calls cost_per_recipe_unit then calculate_ingredient_cost, and routes any unmatched ID or None cost into missing_ingredients (as the Ingredient ID string) instead of costs. Returns {"costs": list[float], "missing_ingredients": list[str]}.
 - calculate_total_ingredient_cost(ingredient_costs: list[float]) -> float
 - calculate_gross_profit(selling_price, total_ingredient_cost) -> float
 - calculate_margin_percent(gross_profit, selling_price) -> float
 - calculate_food_cost(margin_percent) -> float
 
-Known landmine NOT yet fixed (deliberately deferred to data_loader.py): Purchase Cost (and recipe_sheet's Ingredient Cost) are stored as currency strings like "$32.93" in the raw CSVs. pd.read_csv loads these as strings, so build_ingredient_costs's float(row_data["Purchase Cost"]) will raise ValueError until data_loader.py strips the "$" and casts to float before handing DataFrames to calculator.py. calculator.py intentionally does no currency cleaning itself — that's data_loader.py's job, not calculator.py's.
+Known landmine NOT yet fixed (deliberately deferred to data_loader.py): Purchase Cost (ingredient_database) and Selling Price (menu_items) are stored as currency strings like "$32.93" in the raw CSVs, and the fixtures/expected_*.csv files use "$"/"%" strings too. pd.read_csv loads these as strings, so build_ingredient_costs's float(row_data["Purchase Cost"]) will raise ValueError until data_loader.py strips the "$" and casts to float before handing DataFrames to calculator.py. calculator.py intentionally does no currency cleaning itself — that's data_loader.py's job, not calculator.py's.
 
-test_calculator.py's build_ingredient_costs tests use hand-constructed, already-clean DataFrames rather than pd.read_csv on the pilot CSVs — they're unit tests of the join/missing-data logic, isolated from data_loader.py's (not-yet-written) cleaning. TODO once data_loader.py exists: add a separate end-to-end test that loads the real pilot CSVs through it and runs every pilot menu item through the full calculator.py pipeline, checking totals against the known hand-calculated margins.
+test_calculator.py's build_ingredient_costs tests use hand-constructed, already-clean DataFrames (now including an Ingredient ID column) rather than pd.read_csv on the CSVs — they're unit tests of the join/missing-data logic, isolated from data_loader.py's (not-yet-written) cleaning. TODO once data_loader.py exists: add a separate end-to-end test that loads /data/fixtures/{ingredient_database,recipe_sheet,menu_items}.csv through it and runs all 4 pilot menu items through the full calculator.py pipeline, checking per-ingredient costs against expected_ingredient_costs.csv and totals against expected_margins.csv. Compute expected per-ingredient costs from unrounded Purchase Cost / Purchase Size (not the stored Cost Per Recipe Unit column), and assert margins with ~1-cent tolerance since expected_margins.csv is display-rounded.
 
 TODO next: data_loader.py (CSV loading + validation), then app.py (Streamlit MVP: upload → margin report). Stretch goal: in-app persistent editing saved back to CSV.
 
@@ -49,12 +57,15 @@ data_loader.py spec (NOT STARTED):
 Job is loading + cleaning + validating only — no margin/cost math, that boundary stays in calculator.py.
 1. Load the 3 CSVs — from a local path for dev/testing, from a Streamlit-uploaded file object in the app (pd.read_csv handles both the same way).
 2. Clean currency/percent-formatted columns (strip "$" and "%", cast to float):
-   - ingredient_database.csv: Purchase Cost is "$28.82"-style strings (Purchase Size is already clean numeric).
-   - menu_items.csv: Selling Price is "$12.00"-style — this is the only menu_items column calculator.py needs as an input.
-   - menu_items.csv's Total Ingredient Cost/Gross Profit/Margin %/Food Cost and recipe_sheet.csv's Ingredient Cost are the old hand-calculated columns the architecture decision already says become computed outputs — cleaning them is optional/for-comparison-later, not required for the pipeline to run.
-3. Leave genuinely blank cells as NaN (pandas' default) — don't fill or guess, per the missing-data policy. The only real work is not breaking on a column that mixes NaN and "$X.XX" strings.
-4. Validate required columns are present per CSV (e.g. ingredient_database needs Ingredient, Category, Purchase Size, Purchase Unit, Purchase Cost, Recipe Unit) and raise/report something clear on schema drift, rather than a cryptic KeyError three layers deep in calculator.py.
-Open design question: one function per CSV (load_ingredient_database(path), load_recipe_sheet(path), load_menu_items(path), each doing read+clean+validate for its own schema) vs. one generic loader plus a shared strip_currency(series) helper reused across all three. Leaning toward one-function-per-CSV + shared helper since each file's cleaning needs differ, but not decided.
+   - ingredient_database.csv: Purchase Cost is "$28.82"-style strings (Purchase Size is already clean numeric). Ingredient ID is a plain string, no cleaning.
+   - menu_items.csv: Selling Price is "$12.00"-style — the only menu_items column calculator.py needs as an input. Available At is free text ("Both"), leave as string.
+   - The old hand-calculated output columns are gone from menu_items.csv and recipe_sheet.csv, so there's nothing optional left to clean there. But the strip helper is still needed by the end-to-end test to parse fixtures/expected_ingredient_costs.csv ($) and expected_margins.csv ($ and %) — so put it somewhere importable, not buried in a loader function.
+3. Leave genuinely blank cells as NaN (pandas' default) — don't fill or guess, per the missing-data policy. The full /data database has no blanks today, but the loader must still not break on a column that mixes NaN and "$X.XX" strings (a newly-added ingredient row will).
+4. Validate required columns are present per CSV and raise/report something clear on schema drift, rather than a cryptic KeyError three layers deep in calculator.py:
+   - ingredient_database: Ingredient ID, Purchase Size, Purchase Unit, Purchase Cost, Recipe Unit
+   - recipe_sheet: Menu Item, Ingredient ID, Amount Used
+   - menu_items: Menu Item, Selling Price
+Open design question: one function per CSV (load_ingredient_database(path), load_recipe_sheet(path), load_menu_items(path), each doing read+clean+validate for its own schema) vs. one generic loader plus a shared strip_currency(series) helper reused across all three. Leaning one-function-per-CSV + shared helper — and since the test also needs strip_currency, the shared helper is now clearly justified.
 
 Conventions:
 - Test-first: write the pytest test against known pilot CSV values before implementing the function body

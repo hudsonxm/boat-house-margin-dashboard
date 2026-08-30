@@ -24,7 +24,10 @@ def test_cost_per_recipe_unit_bananas() -> None:
 
 def test_cost_per_recipe_unit_iced_tea() -> None:
     """
-    Iced Tea cost per recipe unit test, bags to fl oz conversion.
+    bags -> fl oz conversion (factor 16.88). Only the pinned pilot
+    fixtures still buy tea by the bag -- the live database now tracks
+    brewed tea as its own ingredient -- but this branch must keep
+    working for the regression fixtures.
     """
     result = cost_per_recipe_unit(
         purchase_cost=20.95,
@@ -48,13 +51,29 @@ def test_cost_per_recipe_unit_oat_milk() -> None:
 
     assert result == approx(0.0858, abs=0.0001)
 
+def test_cost_per_recipe_unit_coconut_cubes() -> None:
+    """
+    Coconut Cubes cost per recipe unit test. Purchase Unit "cubes" and
+    Recipe Unit "cubes" now match exactly (data-entry fix), so this falls
+    through to the factor-1 path on purpose rather than by accident.
+    """
+    result = cost_per_recipe_unit(
+        purchase_cost=2.03,
+        purchase_size=14,
+        purchase_unit="cubes",
+        recipe_unit="cubes"
+    )
+
+    assert result == approx(0.1450, abs=0.0001)
+
 def test_cost_per_recipe_unit_blank_cost_returns_none() -> None:
     """
-    Blank-cost test using Collagen's current row in the full ingredient
-    database (blank Purchase Cost and Purchase Size as of 2026-08-13 --
-    this ingredient is expected to get real cost data eventually). pandas
-    reads blank numeric CSV cells as NaN, so cost_per_recipe_unit must
-    return None rather than propagating NaN math.
+    Missing-cost test: when an ingredient's Purchase Cost / Purchase Size
+    haven't been filled in yet, pd.read_csv gives NaN, and
+    cost_per_recipe_unit must return None rather than propagating NaN
+    through the math. The full ingredient database is currently complete,
+    so this guards the "new ingredient added before its price is known"
+    case.
     """
     result = cost_per_recipe_unit(
         purchase_cost=float("nan"),
@@ -79,36 +98,36 @@ def test_calculate_ingredient_cost_oat_milk() -> None:
 def test_build_ingredient_costs_peanut_butter_banana() -> None:
     """
     Happy-path test for the glue function: given Peanut Butter Banana's
-    recipe rows and a clean (already-numeric) ingredient database, costs
+    recipe rows and a clean (already numeric) ingredient database, costs
     should match the pilot sheet's known per-ingredient values with no
     missing ingredients.
     """
     recipe_sheet = pd.DataFrame([
-        {"Menu Item": "Peanut Butter Banana", "Ingredient": "Oat Milk", "Ingredient Category": "Milk", "Amount Used": 10},
-        {"Menu Item": "Peanut Butter Banana", "Ingredient": "Vanilla Protein", "Ingredient Category": "Powder", "Amount Used": 0.8},
-        {"Menu Item": "Peanut Butter Banana", "Ingredient": "PB2", "Ingredient Category": "Powder", "Amount Used": 0.41},
-        {"Menu Item": "Peanut Butter Banana", "Ingredient": "Peanut Butter", "Ingredient Category": "Spread", "Amount Used": 1},
-        {"Menu Item": "Peanut Butter Banana", "Ingredient": "Vanilla Extract", "Ingredient Category": "Extract", "Amount Used": 1.5},
-        {"Menu Item": "Peanut Butter Banana", "Ingredient": "Honey", "Ingredient Category": "Sweetener", "Amount Used": 0.5},
-        {"Menu Item": "Peanut Butter Banana", "Ingredient": "Bananas", "Ingredient Category": "Frozen Fruit", "Amount Used": 4.8},
-        {"Menu Item": "Peanut Butter Banana", "Ingredient": "Coconut Cubes", "Ingredient Category": "Prepared Ingredient", "Amount Used": 3},
-        {"Menu Item": "Peanut Butter Banana", "Ingredient": "20oz Branded Cup", "Ingredient Category": "Packaging", "Amount Used": 1},
-        {"Menu Item": "Peanut Butter Banana", "Ingredient": "20oz Lid", "Ingredient Category": "Packaging", "Amount Used": 1},
-        {"Menu Item": "Peanut Butter Banana", "Ingredient": "Smoothie Straw", "Ingredient Category": "Packaging", "Amount Used": 1},
+        {"Menu Item": "Peanut Butter Banana", "Ingredient ID": "MLK-OAT_MILK", "Ingredient": "Oat Milk", "Amount Used": 10},
+        {"Menu Item": "Peanut Butter Banana", "Ingredient ID": "PWD-VANILLA_PROTEIN", "Ingredient": "Vanilla Protein", "Amount Used": 0.8},
+        {"Menu Item": "Peanut Butter Banana", "Ingredient ID": "PWD-PB2", "Ingredient": "PB2", "Amount Used": 0.41},
+        {"Menu Item": "Peanut Butter Banana", "Ingredient ID": "SPR-PEANUT_BUTTER", "Ingredient": "Peanut Butter", "Amount Used": 1},
+        {"Menu Item": "Peanut Butter Banana", "Ingredient ID": "EXT-VANILLA_EXTRACT", "Ingredient": "Vanilla Extract", "Amount Used": 1.5},
+        {"Menu Item": "Peanut Butter Banana", "Ingredient ID": "SWT-HONEY", "Ingredient": "Honey", "Amount Used": 0.5},
+        {"Menu Item": "Peanut Butter Banana", "Ingredient ID": "FRZ-BANANAS", "Ingredient": "Bananas", "Amount Used": 4.8},
+        {"Menu Item": "Peanut Butter Banana", "Ingredient ID": "PRP-COCONUT_CUBES", "Ingredient": "Coconut Cubes", "Amount Used": 3},
+        {"Menu Item": "Peanut Butter Banana", "Ingredient ID": "PKG-20OZ_BRANDED_CUP", "Ingredient": "20oz Branded Cup", "Amount Used": 1},
+        {"Menu Item": "Peanut Butter Banana", "Ingredient ID": "PKG-20OZ_LID", "Ingredient": "20oz Lid", "Amount Used": 1},
+        {"Menu Item": "Peanut Butter Banana", "Ingredient ID": "PKG-SMOOTHIE_STRAW", "Ingredient": "Smoothie Straw", "Amount Used": 1},
     ])
 
     ingredient_database = pd.DataFrame([
-        {"Ingredient": "Oat Milk", "Category": "Milk", "Purchase Size": 384, "Purchase Unit": "fl oz", "Purchase Cost": 32.93, "Recipe Unit": "fl oz"},
-        {"Ingredient": "Vanilla Protein", "Category": "Powder", "Purchase Size": 2.03, "Purchase Unit": "lbs", "Purchase Cost": 29.59, "Recipe Unit": "oz"},
-        {"Ingredient": "PB2", "Category": "Powder", "Purchase Size": 2, "Purchase Unit": "lbs", "Purchase Cost": 17.94, "Recipe Unit": "oz"},
-        {"Ingredient": "Peanut Butter", "Category": "Spread", "Purchase Size": 30, "Purchase Unit": "lbs", "Purchase Cost": 77.95, "Recipe Unit": "oz"},
-        {"Ingredient": "Vanilla Extract", "Category": "Extract", "Purchase Size": 946, "Purchase Unit": "ml", "Purchase Cost": 8.99, "Recipe Unit": "ml"},
-        {"Ingredient": "Honey", "Category": "Sweetener", "Purchase Size": 2.5, "Purchase Unit": "lbs", "Purchase Cost": 8.49, "Recipe Unit": "oz"},
-        {"Ingredient": "Bananas", "Category": "Frozen Fruit", "Purchase Size": 20, "Purchase Unit": "lbs", "Purchase Cost": 28.82, "Recipe Unit": "oz"},
-        {"Ingredient": "Coconut Cubes", "Category": "Prepared Ingredient", "Purchase Size": 14, "Purchase Unit": "cubes", "Purchase Cost": 2.03, "Recipe Unit": "cube"},
-        {"Ingredient": "20oz Branded Cup", "Category": "Packaging", "Purchase Size": 1000, "Purchase Unit": "each", "Purchase Cost": 295.82, "Recipe Unit": "each"},
-        {"Ingredient": "20oz Lid", "Category": "Packaging", "Purchase Size": 1000, "Purchase Unit": "each", "Purchase Cost": 33.36, "Recipe Unit": "each"},
-        {"Ingredient": "Smoothie Straw", "Category": "Packaging", "Purchase Size": 2000, "Purchase Unit": "each", "Purchase Cost": 44.30, "Recipe Unit": "each"},
+        {"Ingredient ID": "MLK-OAT_MILK", "Ingredient": "Oat Milk", "Category": "Milk", "Purchase Size": 384, "Purchase Unit": "fl oz", "Purchase Cost": 32.93, "Recipe Unit": "fl oz"},
+        {"Ingredient ID": "PWD-VANILLA_PROTEIN", "Ingredient": "Vanilla Protein", "Category": "Powder", "Purchase Size": 2.03, "Purchase Unit": "lbs", "Purchase Cost": 29.59, "Recipe Unit": "oz"},
+        {"Ingredient ID": "PWD-PB2", "Ingredient": "PB2", "Category": "Powder", "Purchase Size": 2, "Purchase Unit": "lbs", "Purchase Cost": 17.94, "Recipe Unit": "oz"},
+        {"Ingredient ID": "SPR-PEANUT_BUTTER", "Ingredient": "Peanut Butter", "Category": "Spread", "Purchase Size": 30, "Purchase Unit": "lbs", "Purchase Cost": 77.95, "Recipe Unit": "oz"},
+        {"Ingredient ID": "EXT-VANILLA_EXTRACT", "Ingredient": "Vanilla Extract", "Category": "Extract", "Purchase Size": 946, "Purchase Unit": "ml", "Purchase Cost": 8.99, "Recipe Unit": "ml"},
+        {"Ingredient ID": "SWT-HONEY", "Ingredient": "Honey", "Category": "Sweetener", "Purchase Size": 2.5, "Purchase Unit": "lbs", "Purchase Cost": 8.49, "Recipe Unit": "oz"},
+        {"Ingredient ID": "FRZ-BANANAS", "Ingredient": "Bananas", "Category": "Frozen Fruit", "Purchase Size": 20, "Purchase Unit": "lbs", "Purchase Cost": 28.82, "Recipe Unit": "oz"},
+        {"Ingredient ID": "PRP-COCONUT_CUBES", "Ingredient": "Coconut Cubes", "Category": "Prepared Ingredient", "Purchase Size": 14, "Purchase Unit": "cubes", "Purchase Cost": 2.03, "Recipe Unit": "cubes"},
+        {"Ingredient ID": "PKG-20OZ_BRANDED_CUP", "Ingredient": "20oz Branded Cup", "Category": "Packaging", "Purchase Size": 1000, "Purchase Unit": "each", "Purchase Cost": 295.82, "Recipe Unit": "each"},
+        {"Ingredient ID": "PKG-20OZ_LID", "Ingredient": "20oz Lid", "Category": "Packaging", "Purchase Size": 1000, "Purchase Unit": "each", "Purchase Cost": 33.36, "Recipe Unit": "each"},
+        {"Ingredient ID": "PKG-SMOOTHIE_STRAW", "Ingredient": "Smoothie Straw", "Category": "Packaging", "Purchase Size": 2000, "Purchase Unit": "each", "Purchase Cost": 44.30, "Recipe Unit": "each"},
     ])
 
     result = build_ingredient_costs("Peanut Butter Banana", recipe_sheet, ingredient_database)
@@ -122,23 +141,22 @@ def test_build_ingredient_costs_peanut_butter_banana() -> None:
 def test_build_ingredient_costs_missing_ingredient() -> None:
     """
     An ingredient present in the recipe sheet but absent from the
-    ingredient database (e.g. not yet added, or a Category mismatch) should
-    be flagged in missing_ingredients rather than raising or silently
-    skipping -- per the missing-data policy, nothing here should be
-    treated as $0.00.
+    ingredient database (e.g. not yet added, or a mistyped Ingredient ID)
+    should be flagged in missing_ingredients (by its Ingredient ID)
+    rather than raising or silently skipping.
     """
     recipe_sheet = pd.DataFrame([
-        {"Menu Item": "Test Item", "Ingredient": "Mystery Ingredient", "Ingredient Category": "Unknown", "Amount Used": 1},
+        {"Menu Item": "Test Item", "Ingredient ID": "MYS-MYSTERY", "Ingredient": "Mystery Ingredient", "Amount Used": 1},
     ])
 
     ingredient_database = pd.DataFrame([
-        {"Ingredient": "Oat Milk", "Category": "Milk", "Purchase Size": 384, "Purchase Unit": "fl oz", "Purchase Cost": 32.93, "Recipe Unit": "fl oz"},
+        {"Ingredient ID": "MLK-OAT_MILK", "Ingredient": "Oat Milk", "Category": "Milk", "Purchase Size": 384, "Purchase Unit": "fl oz", "Purchase Cost": 32.93, "Recipe Unit": "fl oz"},
     ])
 
     result = build_ingredient_costs("Test Item", recipe_sheet, ingredient_database)
 
     assert result["costs"] == []
-    assert result["missing_ingredients"] == ["Mystery Ingredient"]
+    assert result["missing_ingredients"] == ["MYS-MYSTERY"]
 
 def test_calculate_total_ingredient_cost_peanut_butter_banana() -> None:
     """
