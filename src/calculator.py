@@ -31,7 +31,7 @@ def build_ingredient_costs(menu_item: str, recipe_sheet: pd.DataFrame, ingredien
     Builds a dictionary of ingredient costs and missing ingredients (if applicable) for a menu item.
     """
     ingredient_costs = {"costs": [], "missing_ingredients": []}
-    recipe = recipe_sheet[recipe_sheet["Menu Item"] == menu_item]
+    recipe = recipe_sheet.loc[recipe_sheet["Menu Item"] == menu_item]
 
     for _, row in recipe.iterrows():
         ingredient_id = row["Ingredient ID"]

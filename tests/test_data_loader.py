@@ -1,4 +1,5 @@
 import re
+from pathlib import Path
 import pandas as pd
 import pytest
 from src.data_loader import strip_currency
@@ -7,6 +8,8 @@ from src.data_loader import load_menu_items
 from src.data_loader import load_recipe_sheet
 from src.data_loader import _validate_columns
 from src.data_loader import _parse_currency_column
+
+FIXTURES = Path(__file__).resolve().parent.parent / "data" / "fixtures"
 
 def test_strip_currency_preserve_nan():
     """
@@ -52,4 +55,48 @@ def test_parse_currency_column_raises_value_error():
 
     with pytest.raises(ValueError, match=re.escape(expected_msg)):
         _parse_currency_column(expected_df, expected_column, expected_csv_name)
+
+
+def test_load_ingredient_database():
+    """
+    load_ingredient_database() test on the pinned fixture CSV: required columns
+    survive, Purchase Cost is stripped from "$28.82"-style strings to float, and a
+    blank Notes cell stays NaN (missing-data policy).
+    """
+    df = load_ingredient_database(FIXTURES / "ingredient_database.csv")
+
+    expected_required = {"Ingredient ID", "Purchase Size", "Purchase Unit", "Purchase Cost", "Recipe Unit"}
+    assert expected_required <= set(df.columns)
+    assert df["Purchase Cost"].dtype == float
+
+    expected_bananas = df.loc[df["Ingredient ID"] == "FRZ-BANANAS"].iloc[0]
+    assert expected_bananas["Purchase Cost"] == 28.82
+    assert pd.isna(expected_bananas["Notes"])
+
+
+def test_load_menu_items():
+    """
+    load_menu_items() test on the pinned fixture CSV: required columns survive and
+    Selling Price is stripped from "$12.00"-style strings to float.
+    """
+    df = load_menu_items(FIXTURES / "menu_items.csv")
+
+    expected_prices = pd.Series([12.00, 12.00, 9.00, 12.00])
+
+    assert {"Menu Item", "Selling Price"} <= set(df.columns)
+    assert expected_prices.equals(df["Selling Price"])
+
+
+def test_load_recipe_sheet():
+    """
+    load_recipe_sheet() test on the pinned fixture CSV: required columns survive
+    and rows pass through unchanged (no currency columns to clean here).
+    """
+    df = load_recipe_sheet(FIXTURES / "recipe_sheet.csv")
+
+    assert {"Menu Item", "Ingredient ID", "Amount Used"} <= set(df.columns)
+
+    expected_pb_banana = df.loc[df["Menu Item"] == "Peanut Butter Banana"]
+    assert len(expected_pb_banana) == 11
+    assert expected_pb_banana.loc[expected_pb_banana["Ingredient ID"] == "FRZ-BANANAS", "Amount Used"].iloc[0] == 4.8
 
