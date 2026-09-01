@@ -1,3 +1,4 @@
+from pathlib import Path
 import pandas as pd
 from pytest import approx
 from src.calculator import cost_per_recipe_unit
@@ -7,6 +8,12 @@ from src.calculator import calculate_total_ingredient_cost
 from src.calculator import calculate_gross_profit
 from src.calculator import calculate_margin_percent
 from src.calculator import calculate_food_cost
+from src.data_loader import strip_currency
+from src.data_loader import load_ingredient_database
+from src.data_loader import load_recipe_sheet
+from src.data_loader import load_menu_items
+
+FIXTURES = Path(__file__).resolve().parent.parent / "data" / "fixtures"
 
 
 def test_cost_per_recipe_unit_bananas() -> None:
@@ -200,3 +207,62 @@ def test_calculate_food_cost_shark_bite() -> None:
     )
 
     assert result == approx(21.94, abs=0.01)
+
+def test_pipeline_ingredient_costs_all_menu_items() -> None:
+    """
+    End-to-end test: loads the pinned /data/fixtures CSVs through
+    data_loader.py, then runs every pilot menu item through
+    build_ingredient_costs and checks each ingredient's cost against
+    expected_ingredient_costs.csv (computed independently from unrounded
+    Purchase Cost / Purchase Size, not the stored Cost Per Recipe Unit
+    column).
+    """
+    recipe_sheet = load_recipe_sheet(FIXTURES / "recipe_sheet.csv")
+    recipe_sheet = recipe_sheet.sort_values(["Menu Item", "Ingredient ID"])
+    ingredient_database = load_ingredient_database(FIXTURES / "ingredient_database.csv")
+
+    expected = pd.read_csv(FIXTURES / "expected_ingredient_costs.csv")
+    expected["Expected Ingredient Cost"] = strip_currency(expected["Expected Ingredient Cost"])
+    expected = expected.sort_values(["Menu Item", "Ingredient ID"])
+
+    for menu_item in expected["Menu Item"].unique():
+        result = build_ingredient_costs(menu_item, recipe_sheet, ingredient_database)
+        expected_costs = expected.loc[expected["Menu Item"] == menu_item, "Expected Ingredient Cost"].tolist() # type: ignore
+
+        assert result["missing_ingredients"] == []
+        assert result["costs"] == approx(expected_costs, abs=0.0001)
+
+def test_pipeline_margins_all_menu_items() -> None:
+    """
+    End-to-end test: loads the pinned /data/fixtures CSVs through
+    data_loader.py, runs each pilot menu item through the full margin
+    pipeline (build_ingredient_costs -> calculate_total_ingredient_cost ->
+    calculate_gross_profit -> calculate_margin_percent ->
+    calculate_food_cost), and checks totals against expected_margins.csv.
+    Tolerance is ~1 cent / 0.01 percentage point since expected_margins.csv
+    is display-rounded, not exact.
+    """
+    recipe_sheet = load_recipe_sheet(FIXTURES / "recipe_sheet.csv")
+    ingredient_database = load_ingredient_database(FIXTURES / "ingredient_database.csv")
+    menu_items = load_menu_items(FIXTURES / "menu_items.csv")
+
+    expected = pd.read_csv(FIXTURES / "expected_margins.csv")
+    for column in ["Expected Total Ingredient Cost", "Expected Gross Profit", "Expected Margin %", "Expected Food Cost"]:
+        expected[column] = strip_currency(expected[column])
+
+    for _, row in expected.iterrows():
+        menu_item = row["Menu Item"]
+        selling_price = menu_items.loc[menu_items["Menu Item"] == menu_item, "Selling Price"].iloc[0] # type: ignore
+
+        ingredient_costs = build_ingredient_costs(menu_item, recipe_sheet, ingredient_database)
+        assert ingredient_costs["missing_ingredients"] == []
+
+        total_cost = calculate_total_ingredient_cost(ingredient_costs["costs"])
+        gross_profit = calculate_gross_profit(selling_price, total_cost)
+        margin_percent = calculate_margin_percent(gross_profit, selling_price)
+        food_cost = calculate_food_cost(margin_percent)
+
+        assert total_cost == approx(row["Expected Total Ingredient Cost"], abs=0.01)
+        assert gross_profit == approx(row["Expected Gross Profit"], abs=0.01)
+        assert margin_percent == approx(row["Expected Margin %"], abs=0.01)
+        assert food_cost == approx(row["Expected Food Cost"], abs=0.01)

@@ -31,10 +31,11 @@ row_and_ride_dashboard/
 │   └── fixtures/      # pinned 4-item pilot + expected_*.csv oracles for tests
 ├── src/
 │   ├── calculator.py  # pure functions: cost lookup, margin math
-│   └── data_loader.py # CSV validation/cleaning (not started)
+│   └── data_loader.py # CSV loading, cleaning, validation
 ├── app.py             # Streamlit UI (not started)
 ├── tests/
-│   └── test_calculator.py  # pytest, validated against the 4 known pilot menu items
+│   ├── test_calculator.py  # pytest: unit tests + end-to-end pipeline tests against /data/fixtures
+│   └── test_data_loader.py # pytest: strip_currency/_parse_currency_column/_validate_columns + load_* against /data/fixtures
 ├── requirements.txt
 └── README.md
 
@@ -47,25 +48,21 @@ DONE — calculator.py is complete, all functions implemented with passing pytes
 - calculate_margin_percent(gross_profit, selling_price) -> float
 - calculate_food_cost(margin_percent) -> float
 
-Known landmine NOT yet fixed (deliberately deferred to data_loader.py): Purchase Cost (ingredient_database) and Selling Price (menu_items) are stored as currency strings like "$32.93" in the raw CSVs, and the fixtures/expected_*.csv files use "$"/"%" strings too. pd.read_csv loads these as strings, so build_ingredient_costs's float(row_data["Purchase Cost"]) will raise ValueError until data_loader.py strips the "$" and casts to float before handing DataFrames to calculator.py. calculator.py intentionally does no currency cleaning itself — that's data_loader.py's job, not calculator.py's.
+DONE — data_loader.py is complete, all functions implemented with passing pytest tests (tests/test_data_loader.py). Job is loading + cleaning + validating only — no margin/cost math, that boundary stays in calculator.py. Resolved the currency-string landmine above (Purchase Cost, Selling Price):
+- strip_currency(series: pd.Series) -> pd.Series — strips "$", ",", "%" and casts to float via pd.to_numeric(errors="coerce"). Round-trips via astype(str) so numeric columns don't crash the .str accessor; NaN survives the round-trip (str(nan) == "nan" coerces back to NaN). Exported for reuse — also what test_calculator.py's pipeline tests use to parse fixtures/expected_*.csv's "$"/"%" strings.
+- _parse_currency_column(df, column, csv_name) -> pd.Series — wraps strip_currency, then raises ValueError (listing the original bad values) if a populated cell failed to parse (a real data-entry typo, e.g. "$9.0.0"). Genuine blanks (NaN in, NaN out) pass through untouched — this is what distinguishes "missing" from "malformed."
+- _validate_columns(df, required, csv_name) -> None — raises ValueError listing missing required columns, instead of a cryptic KeyError three layers deep in calculator.py.
+- load_ingredient_database(source) -> pd.DataFrame — validates {Ingredient ID, Purchase Size, Purchase Unit, Purchase Cost, Recipe Unit}, cleans Purchase Cost.
+- load_recipe_sheet(source) -> pd.DataFrame — validates {Menu Item, Ingredient ID, Amount Used}; no cleaning needed, nothing in recipe_sheet.csv is currency-formatted.
+- load_menu_items(source) -> pd.DataFrame — validates {Menu Item, Selling Price}, cleans Selling Price.
+- `source` can be a local path or a Streamlit-uploaded file object — pd.read_csv handles both the same way.
+- Design landed on one function per CSV + shared strip_currency/_parse_currency_column/_validate_columns helpers (the open question from before).
 
-test_calculator.py's build_ingredient_costs tests use hand-constructed, already-clean DataFrames (now including an Ingredient ID column) rather than pd.read_csv on the CSVs — they're unit tests of the join/missing-data logic, isolated from data_loader.py's (not-yet-written) cleaning. TODO once data_loader.py exists: add a separate end-to-end test that loads /data/fixtures/{ingredient_database,recipe_sheet,menu_items}.csv through it and runs all 4 pilot menu items through the full calculator.py pipeline, checking per-ingredient costs against expected_ingredient_costs.csv and totals against expected_margins.csv. Compute expected per-ingredient costs from unrounded Purchase Cost / Purchase Size (not the stored Cost Per Recipe Unit column), and assert margins with ~1-cent tolerance since expected_margins.csv is display-rounded.
+DONE — end-to-end pipeline tests, in test_calculator.py, exercising data_loader.py + calculator.py together against /data/fixtures:
+- test_pipeline_ingredient_costs_all_menu_items — loads /data/fixtures/{ingredient_database,recipe_sheet}.csv through data_loader.py, runs all 4 pilot menu items through build_ingredient_costs, and checks each cost against expected_ingredient_costs.csv (parsed via strip_currency). build_ingredient_costs returns bare costs with no Ingredient ID attached, so both sides are sorted by ["Menu Item", "Ingredient ID"] before comparing — an explicit alignment, not a reliance on the two fixture files happening to list ingredients in the same order.
+- test_pipeline_margins_all_menu_items — additionally loads menu_items.csv, chains the full pipeline (build_ingredient_costs → calculate_total_ingredient_cost → calculate_gross_profit → calculate_margin_percent → calculate_food_cost) per menu item, and checks totals against expected_margins.csv with ~1-cent/0.01-point tolerance (display-rounded, not exact).
 
-TODO next: data_loader.py (CSV loading + validation), then app.py (Streamlit MVP: upload → margin report). Stretch goal: in-app persistent editing saved back to CSV.
-
-data_loader.py spec (NOT STARTED):
-Job is loading + cleaning + validating only — no margin/cost math, that boundary stays in calculator.py.
-1. Load the 3 CSVs — from a local path for dev/testing, from a Streamlit-uploaded file object in the app (pd.read_csv handles both the same way).
-2. Clean currency/percent-formatted columns (strip "$" and "%", cast to float):
-   - ingredient_database.csv: Purchase Cost is "$28.82"-style strings (Purchase Size is already clean numeric). Ingredient ID is a plain string, no cleaning.
-   - menu_items.csv: Selling Price is "$12.00"-style — the only menu_items column calculator.py needs as an input. Available At is free text ("Both"), leave as string.
-   - The old hand-calculated output columns are gone from menu_items.csv and recipe_sheet.csv, so there's nothing optional left to clean there. But the strip helper is still needed by the end-to-end test to parse fixtures/expected_ingredient_costs.csv ($) and expected_margins.csv ($ and %) — so put it somewhere importable, not buried in a loader function.
-3. Leave genuinely blank cells as NaN (pandas' default) — don't fill or guess, per the missing-data policy. The full /data database has no blanks today, but the loader must still not break on a column that mixes NaN and "$X.XX" strings (a newly-added ingredient row will).
-4. Validate required columns are present per CSV and raise/report something clear on schema drift, rather than a cryptic KeyError three layers deep in calculator.py:
-   - ingredient_database: Ingredient ID, Purchase Size, Purchase Unit, Purchase Cost, Recipe Unit
-   - recipe_sheet: Menu Item, Ingredient ID, Amount Used
-   - menu_items: Menu Item, Selling Price
-Open design question: one function per CSV (load_ingredient_database(path), load_recipe_sheet(path), load_menu_items(path), each doing read+clean+validate for its own schema) vs. one generic loader plus a shared strip_currency(series) helper reused across all three. Leaning one-function-per-CSV + shared helper — and since the test also needs strip_currency, the shared helper is now clearly justified.
+TODO next: app.py (Streamlit MVP: upload → margin report). Stretch goal: in-app persistent editing saved back to CSV.
 
 Conventions:
 - Test-first: write the pytest test against known pilot CSV values before implementing the function body
