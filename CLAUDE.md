@@ -64,12 +64,26 @@ DONE — end-to-end pipeline tests, in test_calculator.py, exercising data_loade
 - test_pipeline_margins_all_menu_items — additionally loads menu_items.csv, chains the full pipeline (build_ingredient_costs → calculate_total_ingredient_cost → calculate_gross_profit → calculate_margin_percent → calculate_food_cost) per menu item, and checks totals against expected_margins.csv with ~1-cent/0.01-point tolerance (display-rounded, not exact). Still asserts Margin % since the fixture column exists — the not-in-the-report decision only applies to build_margin_report's output.
 - test_build_margin_report_all_menu_items — loads the three fixture CSVs, calls build_margin_report once, and asserts row count + Total Ingredient Cost / Gross Profit / Food Cost / Missing Ingredients per menu item against expected_margins.csv (same tolerance). Margin % is loaded but not asserted (not a report column). Largely supersedes the inline loop in test_pipeline_margins_all_menu_items.
 
-IN PROGRESS — app.py (Streamlit MVP). Plan agreed:
-- Scope: read-only margin report. Upload the 3 CSVs (fall back to /data/*.csv when nothing is uploaded, for dev); run through data_loader.py → build_margin_report; render as a table.
-- Missing-ingredient rows: surface a per-menu-item st.warning listing the unmatched Ingredient IDs, and visually mark those rows — build_margin_report leaves their numbers in place, so the UI is the only thing stopping an understated cost / inflated margin from looking legit. No missing rows exist in /data today, so this only fires on genuine misuse (mistyped ID, ingredient not yet added).
-- Show the bowl-undercount caveat (toppings not in recipe_sheet) somewhere visible near the bowl rows.
-- requirements.txt still needs `streamlit` added.
-Stretch goal: sidebar widget to override one ingredient's Purchase Cost and watch food cost % recompute (demonstrates the cascade). Further stretch: in-app persistent editing saved back to CSV.
+IN PROGRESS — app.py (Streamlit MVP). Run with `python -m streamlit run app.py` (python -m for the same PATH/venv reason as pytest), opens localhost:8501, upload the 3 CSVs from data/ in the sidebar.
+
+DONE (first pass):
+- load_source_data() — the single section that knows the data is CSV uploads. 3 sidebar st.file_uploader widgets; on upload calls load_ingredient_database / load_recipe_sheet / load_menu_items; catches ValueError → st.error + st.stop; st.info + st.stop until all three are present. Returns (ingredient_database, recipe_sheet, menu_items) as DataFrames — everything below the divider is DataFrames-only, so a Google Sheets source can be added inside this one function.
+- Margin report section: build_margin_report → st.dataframe with column_config (Selling Price / Total Ingredient Cost / Gross Profit as $%.2f, Food Cost as "%.1f%%" — literal percent, value is already in points).
+- Missing-ingredient handling: incomplete mask = Missing Ingredients list non-empty; st.warning above the table listing affected menu items + unpriced IDs; amber Styler row wash (rgba(255,171,0,0.18), theme-safe) on incomplete rows; Missing Ingredients rendered as comma-joined string ("" not []) via a display copy.
+- requirements.txt now has streamlit.
+
+WHAT'S LEFT:
+To make it usable:
+- /data fallback — planned but not built. Currently hard-stops until all 3 files are uploaded; fall back to data/*.csv when nothing is uploaded so dev/demo doesn't re-upload every reload. Goes inside load_source_data().
+- Bowl-undercount caveat — the known modeling gap (bowls priced "includes any 4 toppings", no topping rows in recipe_sheet.csv). Bowl margins currently render as trustworthy while inflated. Needs at least a visible caveat near those rows, ideally the same de-confidence treatment as missing-ingredient rows.
+- Menu Item Category validation — build_margin_report reads that column but load_menu_items only requires {Menu Item, Selling Price}, so a menu CSV without it throws a raw KeyError instead of the friendly _validate_columns ValueError. One-line fix (add it to the required set).
+- Non-ValueError upload failures — empty file / non-CSV / pandas ParserError aren't caught by `except ValueError` and dump a traceback into the UI.
+Polish:
+- README.md is empty — for the resume-project angle it needs what/why/screenshot/run steps.
+- No tests around the display layer. Streamlit is awkward to test, but the missing-ingredient formatting (list → comma string, incomplete mask) could move to a small helper with a unit test.
+- The st.success("Loaded N ingredients…") line is scaffolding — drop or move to the sidebar once the report is the main event.
+
+Stretch goal: sidebar widget to override one ingredient's Purchase Cost and watch food cost % recompute (demonstrates the cascade). Food-cost threshold highlighting (flag items above a target %). Further stretch: in-app persistent editing saved back to CSV.
 
 Conventions:
 - Test-first: write the pytest test against known pilot CSV values before implementing the function body
