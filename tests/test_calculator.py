@@ -8,6 +8,7 @@ from src.calculator import calculate_total_ingredient_cost
 from src.calculator import calculate_gross_profit
 from src.calculator import calculate_margin_percent
 from src.calculator import calculate_food_cost
+from src.calculator import build_margin_report
 from src.data_loader import strip_currency
 from src.data_loader import load_ingredient_database
 from src.data_loader import load_recipe_sheet
@@ -266,3 +267,33 @@ def test_pipeline_margins_all_menu_items() -> None:
         assert gross_profit == approx(row["Expected Gross Profit"], abs=0.01)
         assert margin_percent == approx(row["Expected Margin %"], abs=0.01)
         assert food_cost == approx(row["Expected Food Cost"], abs=0.01)
+
+def test_build_margin_report_all_menu_items() -> None:
+    """
+    End-to-end test for the UI glue function: loads the pinned /data/fixtures
+    CSVs through data_loader.py, builds the whole margin report in one call,
+    and checks every column against expected_margins.csv. Margin % is
+    deliberately not in the report (the shop only tracks food cost %), so it
+    isn't asserted here even though expected_margins.csv still carries it.
+    Tolerance is ~1 cent / 0.01 point since expected_margins.csv is
+    display-rounded, not exact.
+    """
+    recipe_sheet = load_recipe_sheet(FIXTURES / "recipe_sheet.csv")
+    ingredient_database = load_ingredient_database(FIXTURES / "ingredient_database.csv")
+    menu_items = load_menu_items(FIXTURES / "menu_items.csv")
+
+    expected = pd.read_csv(FIXTURES / "expected_margins.csv")
+    for column in ["Expected Total Ingredient Cost", "Expected Gross Profit", "Expected Food Cost"]:
+        expected[column] = strip_currency(expected[column])
+
+    report = build_margin_report(menu_items, recipe_sheet, ingredient_database)
+
+    assert len(report) == len(menu_items)
+
+    for _, exp in expected.iterrows():
+        actual = report.loc[report["Menu Item"] == exp["Menu Item"]].iloc[0]
+
+        assert actual["Missing Ingredients"] == []
+        assert actual["Total Ingredient Cost"] == approx(exp["Expected Total Ingredient Cost"], abs=0.01)
+        assert actual["Gross Profit"] == approx(exp["Expected Gross Profit"], abs=0.01)
+        assert actual["Food Cost"] == approx(exp["Expected Food Cost"], abs=0.01)

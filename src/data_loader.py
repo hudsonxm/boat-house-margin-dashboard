@@ -22,8 +22,10 @@ def _parse_currency_column(df: pd.DataFrame, column: str, csv_name: str) -> pd.S
 
     missing = raw.notna() & cleaned.isna()
     if missing.any():
-        bad = raw[missing].to_dict() # {row index: original value}
-        raise ValueError(f"{csv_name} could not parse {column} values: {list(bad.values())}") # TODO: surface as UI warning like missing_ingredients
+        bad = raw[missing].to_dict()  # {row index: original value}
+        raise ValueError(
+            f"{csv_name} could not parse {column} values: {list(bad.values())}"
+        )  # TODO: surface as UI warning like missing_ingredients
 
     return cleaned
 
@@ -41,12 +43,21 @@ def load_ingredient_database(source) -> pd.DataFrame:
     """
     df = pd.read_csv(source)
 
-    _validate_columns(df,
-                    {"Ingredient ID", "Purchase Size", "Purchase Unit", "Purchase Cost", "Recipe Unit"},
-                    "Ingredient Database"
-                    )
+    _validate_columns(
+        df,
+        {
+            "Ingredient ID",
+            "Purchase Size",
+            "Purchase Unit",
+            "Purchase Cost",
+            "Recipe Unit",
+        },
+        "Ingredient Database",
+    )
 
-    df["Purchase Cost"] = _parse_currency_column(df, "Purchase Cost", "Ingredient Database")
+    df["Purchase Cost"] = _parse_currency_column(
+        df, "Purchase Cost", "Ingredient Database"
+    )
     return df
 
 
@@ -67,7 +78,7 @@ def load_menu_items(source) -> pd.DataFrame:
     """
     df = pd.read_csv(source)
 
-    _validate_columns(df, {"Menu Item", "Selling Price"}, "Menu Items")
+    _validate_columns(df, {"Menu Item", "Menu Item Category", "Selling Price"}, "Menu Items")
 
     df["Selling Price"] = _parse_currency_column(df, "Selling Price", "Menu Items")
     return df

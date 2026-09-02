@@ -1,7 +1,7 @@
 Project: Row and Ride Margins Dashboard
 
 Building a Python tool to replace a Google Sheets margin calculator for my mom's smoothie/bowl bar (Row and Ride / Boathouse Nutrition). It's also my resume project for co-op search (rising 2nd year, Northeastern).
-Goal: Streamlit dashboard where you upload 3 CSVs (ingredient database, recipe sheet, menu items) and it automatically calculates ingredient cost, gross profit, margin %, and food cost % per menu item — replacing manual spreadsheet math.
+Goal: Streamlit dashboard where you upload 3 CSVs (ingredient database, recipe sheet, menu items) and it automatically calculates ingredient cost, gross profit, and food cost % per menu item — replacing manual spreadsheet math. (Margin % is still computed inside calculator.py — it's how food cost % is derived — but it is NOT surfaced in the report or UI: the shop only tracks food cost %.)
 
 Data schema (full CSVs live in /data; pinned test fixtures in /data/fixtures):
 ingredient_database.csv: Ingredient ID, Ingredient, Category, Purchase Size, Purchase Unit, Purchase Cost, Cost Per Recipe Unit, Recipe Unit, Supplier, Last Updated, Notes. Ingredient ID (e.g. FRZ-BANANAS, PKG-20OZ_LID) is the stable join key. The database is now fully populated — every row has cost data (many rows are supplier-estimated, flagged "EST" in Notes). No more pilot_ingredient_database.csv; the calculator's regression fixtures live in /data/fixtures/ instead.
@@ -32,7 +32,7 @@ row_and_ride_dashboard/
 ├── src/
 │   ├── calculator.py  # pure functions: cost lookup, margin math
 │   └── data_loader.py # CSV loading, cleaning, validation
-├── app.py             # Streamlit UI (not started)
+├── app.py             # Streamlit UI (in progress — read-only margin report MVP)
 ├── tests/
 │   ├── test_calculator.py  # pytest: unit tests + end-to-end pipeline tests against /data/fixtures
 │   └── test_data_loader.py # pytest: strip_currency/_parse_currency_column/_validate_columns + load_* against /data/fixtures
@@ -47,6 +47,7 @@ DONE — calculator.py is complete, all functions implemented with passing pytes
 - calculate_gross_profit(selling_price, total_ingredient_cost) -> float
 - calculate_margin_percent(gross_profit, selling_price) -> float
 - calculate_food_cost(margin_percent) -> float
+- build_margin_report(menu_items, recipe_sheet, ingredient_database) -> pd.DataFrame — the UI glue function. One row per menu item, chaining build_ingredient_costs → calculate_total_ingredient_cost → calculate_gross_profit → calculate_margin_percent → calculate_food_cost. Columns: Menu Item, Category (from menu_items.csv's Menu Item Category), Selling Price, Total Ingredient Cost, Gross Profit, Food Cost, Missing Ingredients (list). Margin % is computed on the way to Food Cost but deliberately NOT a column. Missing-ingredient rows are left with their partial (understated-cost, overstated-margin) numbers intact — build_margin_report does NOT null them out; app.py is responsible for flagging/grey-ing those rows off the non-empty Missing Ingredients list. Takes already-loaded DataFrames (no data_loader import — the loader → calculator dependency stays one-way).
 
 DONE — data_loader.py is complete, all functions implemented with passing pytest tests (tests/test_data_loader.py). Job is loading + cleaning + validating only — no margin/cost math, that boundary stays in calculator.py. Resolved the currency-string landmine above (Purchase Cost, Selling Price):
 - strip_currency(series: pd.Series) -> pd.Series — strips "$", ",", "%" and casts to float via pd.to_numeric(errors="coerce"). Round-trips via astype(str) so numeric columns don't crash the .str accessor; NaN survives the round-trip (str(nan) == "nan" coerces back to NaN). Exported for reuse — also what test_calculator.py's pipeline tests use to parse fixtures/expected_*.csv's "$"/"%" strings.
@@ -60,9 +61,15 @@ DONE — data_loader.py is complete, all functions implemented with passing pyte
 
 DONE — end-to-end pipeline tests, in test_calculator.py, exercising data_loader.py + calculator.py together against /data/fixtures:
 - test_pipeline_ingredient_costs_all_menu_items — loads /data/fixtures/{ingredient_database,recipe_sheet}.csv through data_loader.py, runs all 4 pilot menu items through build_ingredient_costs, and checks each cost against expected_ingredient_costs.csv (parsed via strip_currency). build_ingredient_costs returns bare costs with no Ingredient ID attached, so both sides are sorted by ["Menu Item", "Ingredient ID"] before comparing — an explicit alignment, not a reliance on the two fixture files happening to list ingredients in the same order.
-- test_pipeline_margins_all_menu_items — additionally loads menu_items.csv, chains the full pipeline (build_ingredient_costs → calculate_total_ingredient_cost → calculate_gross_profit → calculate_margin_percent → calculate_food_cost) per menu item, and checks totals against expected_margins.csv with ~1-cent/0.01-point tolerance (display-rounded, not exact).
+- test_pipeline_margins_all_menu_items — additionally loads menu_items.csv, chains the full pipeline (build_ingredient_costs → calculate_total_ingredient_cost → calculate_gross_profit → calculate_margin_percent → calculate_food_cost) per menu item, and checks totals against expected_margins.csv with ~1-cent/0.01-point tolerance (display-rounded, not exact). Still asserts Margin % since the fixture column exists — the not-in-the-report decision only applies to build_margin_report's output.
+- test_build_margin_report_all_menu_items — loads the three fixture CSVs, calls build_margin_report once, and asserts row count + Total Ingredient Cost / Gross Profit / Food Cost / Missing Ingredients per menu item against expected_margins.csv (same tolerance). Margin % is loaded but not asserted (not a report column). Largely supersedes the inline loop in test_pipeline_margins_all_menu_items.
 
-TODO next: app.py (Streamlit MVP: upload → margin report). Stretch goal: in-app persistent editing saved back to CSV.
+IN PROGRESS — app.py (Streamlit MVP). Plan agreed:
+- Scope: read-only margin report. Upload the 3 CSVs (fall back to /data/*.csv when nothing is uploaded, for dev); run through data_loader.py → build_margin_report; render as a table.
+- Missing-ingredient rows: surface a per-menu-item st.warning listing the unmatched Ingredient IDs, and visually mark those rows — build_margin_report leaves their numbers in place, so the UI is the only thing stopping an understated cost / inflated margin from looking legit. No missing rows exist in /data today, so this only fires on genuine misuse (mistyped ID, ingredient not yet added).
+- Show the bowl-undercount caveat (toppings not in recipe_sheet) somewhere visible near the bowl rows.
+- requirements.txt still needs `streamlit` added.
+Stretch goal: sidebar widget to override one ingredient's Purchase Cost and watch food cost % recompute (demonstrates the cascade). Further stretch: in-app persistent editing saved back to CSV.
 
 Conventions:
 - Test-first: write the pytest test against known pilot CSV values before implementing the function body
