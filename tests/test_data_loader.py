@@ -23,7 +23,7 @@ def test_google_sheet_csv_url_encodes_tab_name():
 
     assert url == (
         "https://docs.google.com/spreadsheets/d/SHEET_ID_123"
-        "/gviz/tq?tqx=out:csv&sheet=INGREDIENT%20DATABASE"
+        "/gviz/tq?tqx=out:csv&headers=1&sheet=INGREDIENT%20DATABASE"
     )
 
 def test_strip_currency_preserve_nan():

@@ -12,10 +12,16 @@ def google_sheet_csv_url(spreadsheet_id: str, sheet_name: str) -> str:
     "Anyone with the link -> Viewer" for this to be readable without credentials.
     The result is a plain URL string — pass it straight to any load_* function
     below, exactly like a local path.
+
+    headers=1 is required, not optional: without it the CSV endpoint auto-detects
+    the header-row count and, once a tab grows past a certain size, guesses wrong
+    — collapsing column A into a single giant row-1 cell and dropping the real
+    header, which then trips _validate_columns. Pinning it to 1 disables that
+    guess.
     """
     return (
         f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}"
-        f"/gviz/tq?tqx=out:csv&sheet={quote(sheet_name)}"
+        f"/gviz/tq?tqx=out:csv&headers=1&sheet={quote(sheet_name)}"
     )
 
 
