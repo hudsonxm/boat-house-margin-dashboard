@@ -12,27 +12,30 @@ service-account API) inside that one function without touching anything else.
 """
 
 import base64
-import time
+import csv
+import io
 from datetime import datetime
 from pathlib import Path
-from urllib.error import URLError
 
+import gspread
 import streamlit as st
-from pandas.errors import ParserError
+from streamlit.errors import StreamlitSecretNotFoundError
 
 from src.calculator import build_margin_report
 from src.data_loader import (
-    google_sheet_csv_url,
     load_ingredient_database,
     load_recipe_sheet,
     load_menu_items,
 )
 
-# Backend: the Row and Ride margin workbook, shared "Anyone with the link ->
-# Viewer" so its per-tab CSV export is readable without credentials. Keys are
-# the tab names exactly as they appear in the sheet.
+# Backend: the Row and Ride margin workbook. Read through a Google service
+# account whose key JSON lives in st.secrets["gcp_service_account"] (local
+# .streamlit/secrets.toml + Streamlit Cloud Secrets); the sheet itself stays
+# Restricted, shared only with that account's client_email as Viewer.
 SPREADSHEET_ID = "1t1L2AvixDlgnFTuZhUqucrXwGY31kvNuUD05slbRelU"
 SHEET_EDIT_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/edit"
+SHEET_TABS = ("INGREDIENT DATABASE", "RECIPE SHEET", "MENU ITEMS")  # exact tab names
+SHEET_READONLY_SCOPE = "https://www.googleapis.com/auth/spreadsheets.readonly"
 SHEET_CACHE_TTL = 600  # seconds before an untouched app re-pulls the sheet
 
 # Food cost above this (%) is the "keep an eye on it" line — ~30% is the
@@ -87,59 +90,102 @@ if _icon:
 # --------------------------------------------------------------------------- #
 
 
-@st.cache_data(ttl=SHEET_CACHE_TTL, show_spinner="Loading data from the Google Sheet…")
-def _fetch_sheet(spreadsheet_id: str):
-    """Pull + clean + validate all three tabs. Cached, so reruns don't refetch;
-    the cache key is spreadsheet_id and it expires after SHEET_CACHE_TTL. Returns
-    (ingredient_database, recipe_sheet, menu_items, fetched_at). Exceptions
-    propagate to load_source_data() to be shown in the UI (a cache miss re-runs
-    this, so a transient network error isn't stuck in the cache)."""
-    # Google caches each tab's CSV export for a few minutes; a per-fetch nonce
-    # sidesteps that so an edit in the sheet is visible as soon as this reruns
-    # (on the SHEET_CACHE_TTL timer, or immediately via "Refresh from sheet").
-    bust = f"&_cb={int(time.time())}"
+@st.cache_resource(show_spinner=False)
+def _open_workbook():
+    """Authorize a gspread client from st.secrets and open the workbook once per
+    session (one auth handshake, reused across reruns). Raises KeyError if the
+    `gcp_service_account` secret is absent; gspread auth/permission errors bubble
+    up to load_source_data()."""
+    client = gspread.service_account_from_dict(
+        dict(st.secrets["gcp_service_account"]),
+        scopes=[SHEET_READONLY_SCOPE],
+    )
+    return client.open_by_key(SPREADSHEET_ID)
 
-    ingredient_database = load_ingredient_database(
-        google_sheet_csv_url(spreadsheet_id, "INGREDIENT DATABASE") + bust
-    )
-    recipe_sheet = load_recipe_sheet(
-        google_sheet_csv_url(spreadsheet_id, "RECIPE SHEET") + bust
-    )
-    menu_items = load_menu_items(
-        google_sheet_csv_url(spreadsheet_id, "MENU ITEMS") + bust
-    )
-    return ingredient_database, recipe_sheet, menu_items, datetime.now()
+
+@st.cache_data(ttl=SHEET_CACHE_TTL, show_spinner="Loading data from the Google Sheet…")
+def _fetch_sheet():
+    """Read + clean + validate all three tabs via the service account. Cached, so
+    reruns don't refetch; expires after SHEET_CACHE_TTL, or clear it with the
+    "Refresh from sheet" button. Each worksheet's cell grid is re-serialized to
+    CSV in memory so the existing load_* functions (which expect a CSV source)
+    are reused unchanged. Returns (idb, recipe, menu, fetched_at); exceptions
+    propagate to load_source_data() (a cache miss re-runs this, so a transient
+    failure isn't stuck in the cache)."""
+    workbook = _open_workbook()
+    loaders = (load_ingredient_database, load_recipe_sheet, load_menu_items)
+
+    frames = []
+    for tab, loader in zip(SHEET_TABS, loaders):
+        rows = workbook.worksheet(tab).get_all_values()
+        # get_all_values() returns the sheet's whole default grid (26 cols wide,
+        # padded with ""). Trim trailing empty header columns, then drop fully
+        # blank rows, so the DataFrame isn't carrying "Unnamed" columns / NaN rows.
+        header = list(rows[0])
+        while header and not header[-1].strip():
+            header.pop()
+        width = len(header)
+        grid = [header] + [
+            row[:width] for row in rows[1:] if any(cell.strip() for cell in row[:width])
+        ]
+
+        buffer = io.StringIO()
+        csv.writer(buffer).writerows(grid)
+        buffer.seek(0)
+        frames.append(loader(buffer))
+
+    return (*frames, datetime.now())
 
 
 def load_source_data():
     """Read the Google Sheet and return the three cleaned DataFrames.
 
-    Returns (ingredient_database, recipe_sheet, menu_items). On a data problem in
-    the sheet (missing column, malformed currency cell → ValueError) or an
-    unreachable / wrongly-shared sheet (URLError / ParserError), it shows the
-    problem and halts the script with st.stop() so nothing downstream runs on
-    bad data.
+    Returns (ingredient_database, recipe_sheet, menu_items). Halts the script
+    with st.stop() and a targeted message on: missing credentials (KeyError),
+    the sheet not shared with the service account (SpreadsheetNotFound), a
+    renamed/missing tab (WorksheetNotFound), a Sheets API problem (APIError), or
+    bad data in the sheet (ValueError) — so nothing downstream runs on bad data.
     """
     st.sidebar.header("Data source")
     st.sidebar.caption("Live from the Row and Ride margins Google Sheet.")
     st.sidebar.link_button("Open the sheet", SHEET_EDIT_URL, use_container_width=True)
     if st.sidebar.button("Refresh from sheet", use_container_width=True):
         _fetch_sheet.clear()
+        _open_workbook.clear()
         st.rerun()
 
     try:
-        ingredient_database, recipe_sheet, menu_items, fetched_at = _fetch_sheet(
-            SPREADSHEET_ID
+        ingredient_database, recipe_sheet, menu_items, fetched_at = _fetch_sheet()
+    except (KeyError, StreamlitSecretNotFoundError):
+        # KeyError: secrets.toml exists but has no [gcp_service_account] table.
+        # StreamlitSecretNotFoundError: no secrets.toml at all.
+        st.error(
+            "No service-account credentials found. Add the key JSON under "
+            "`[gcp_service_account]` in `.streamlit/secrets.toml` locally, and in "
+            "the app's **Settings → Secrets** on Streamlit Cloud."
         )
+        st.stop()
+    except gspread.exceptions.SpreadsheetNotFound:
+        st.error(
+            "The service account can't open the workbook — share the Google "
+            "Sheet (Viewer) with the `client_email` from the key JSON."
+        )
+        st.stop()
+    except gspread.exceptions.WorksheetNotFound as error:
+        st.error(
+            f"A tab is missing or renamed ({error}). Expected: "
+            + ", ".join(SHEET_TABS)
+            + "."
+        )
+        st.stop()
+    except gspread.exceptions.APIError as error:
+        st.error(
+            "Google Sheets API error — check the Sheets API is enabled for the "
+            f"service account's project.\n\n{error}"
+        )
+        st.stop()
     except ValueError as error:
         st.error(f"The Google Sheet has a data problem: {error}")
-        st.stop()
-    except (URLError, ParserError) as error:
-        st.error(
-            "Couldn't read the Google Sheet. Check that it's shared as "
-            "“Anyone with the link → Viewer” and that you're online.\n\n"
-            f"{error}"
-        )
         st.stop()
 
     st.sidebar.success(f"Loaded — {fetched_at:%b %d, %I:%M %p}")
