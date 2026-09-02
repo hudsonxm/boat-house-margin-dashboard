@@ -55,8 +55,9 @@ DONE — data_loader.py is complete, all functions implemented with passing pyte
 - _validate_columns(df, required, csv_name) -> None — raises ValueError listing missing required columns, instead of a cryptic KeyError three layers deep in calculator.py.
 - load_ingredient_database(source) -> pd.DataFrame — validates {Ingredient ID, Purchase Size, Purchase Unit, Purchase Cost, Recipe Unit}, cleans Purchase Cost.
 - load_recipe_sheet(source) -> pd.DataFrame — validates {Menu Item, Ingredient ID, Amount Used}; no cleaning needed, nothing in recipe_sheet.csv is currency-formatted.
-- load_menu_items(source) -> pd.DataFrame — validates {Menu Item, Selling Price}, cleans Selling Price.
-- `source` can be a local path or a Streamlit-uploaded file object — pd.read_csv handles both the same way.
+- load_menu_items(source) -> pd.DataFrame — validates {Menu Item, Menu Item Category, Selling Price}, cleans Selling Price. (Menu Item Category added to the required set because build_margin_report reads it — was a raw KeyError otherwise.)
+- google_sheet_csv_url(spreadsheet_id, sheet_name) -> str — builds the gviz per-tab CSV export URL (URL-encodes the tab name). Returns a plain URL string; pd.read_csv reads it exactly like a local path, so the load_* functions need no change. Requires the workbook shared "Anyone with the link -> Viewer". Unit-tested (string building only, no network) in test_data_loader.py.
+- `source` can be a local path, a Streamlit-uploaded file object, or a URL string — pd.read_csv handles all three the same way.
 - Design landed on one function per CSV + shared strip_currency/_parse_currency_column/_validate_columns helpers (the open question from before).
 
 DONE — end-to-end pipeline tests, in test_calculator.py, exercising data_loader.py + calculator.py together against /data/fixtures:
@@ -64,24 +65,29 @@ DONE — end-to-end pipeline tests, in test_calculator.py, exercising data_loade
 - test_pipeline_margins_all_menu_items — additionally loads menu_items.csv, chains the full pipeline (build_ingredient_costs → calculate_total_ingredient_cost → calculate_gross_profit → calculate_margin_percent → calculate_food_cost) per menu item, and checks totals against expected_margins.csv with ~1-cent/0.01-point tolerance (display-rounded, not exact). Still asserts Margin % since the fixture column exists — the not-in-the-report decision only applies to build_margin_report's output.
 - test_build_margin_report_all_menu_items — loads the three fixture CSVs, calls build_margin_report once, and asserts row count + Total Ingredient Cost / Gross Profit / Food Cost / Missing Ingredients per menu item against expected_margins.csv (same tolerance). Margin % is loaded but not asserted (not a report column). Largely supersedes the inline loop in test_pipeline_margins_all_menu_items.
 
-IN PROGRESS — app.py (Streamlit MVP). Run with `python -m streamlit run app.py` (python -m for the same PATH/venv reason as pytest), opens localhost:8501, upload the 3 CSVs from data/ in the sidebar.
+IN PROGRESS — app.py (Streamlit MVP). Run with `python -m streamlit run app.py` (python -m for the same PATH/venv reason as pytest), opens localhost:8501. No upload step — it reads the Google Sheet on load.
 
 DONE (first pass):
-- load_source_data() — the single section that knows the data is CSV uploads. 3 sidebar st.file_uploader widgets; on upload calls load_ingredient_database / load_recipe_sheet / load_menu_items; catches ValueError → st.error + st.stop; st.info + st.stop until all three are present. Returns (ingredient_database, recipe_sheet, menu_items) as DataFrames — everything below the divider is DataFrames-only, so a Google Sheets source can be added inside this one function.
-- Margin report section: build_margin_report → st.dataframe with column_config (Selling Price / Total Ingredient Cost / Gross Profit as $%.2f, Food Cost as "%.1f%%" — literal percent, value is already in points).
+- Backend is the Row and Ride margin Google Sheet (SPREADSHEET_ID constant in app.py; tabs INGREDIENT DATABASE / RECIPE SHEET / MENU ITEMS), shared "Anyone with the link -> Viewer" so the gviz CSV export needs no credentials. The shop edits the sheet; the app reflects it.
+- _fetch_sheet(spreadsheet_id) — @st.cache_data(ttl=SHEET_CACHE_TTL=600s), pulls all three tabs via google_sheet_csv_url + the load_* functions, returns (idb, rs, mi, fetched_at). Cache means reruns don't refetch; exceptions propagate (not cached) so a transient failure clears on retry.
+- load_source_data() — still the single seam that knows where data comes from. Sidebar: "Open the sheet" link_button + "Refresh from sheet" button (_fetch_sheet.clear() + st.rerun()) + a "Loaded — <time>" success caption. Catches ValueError (sheet data problem: missing column / malformed cell) and (URLError, ParserError) (unreachable / wrongly-shared) → st.error + st.stop. Returns the 3 DataFrames; everything below the divider is DataFrames-only, so the source could still be swapped (back to upload, or to a service-account API) inside this one function.
+- Margin report section: build_margin_report → st.dataframe with column_config (Selling Price / Total Ingredient Cost / Gross Profit as $%.2f, Food Cost as "%.1f%%" — literal percent, value is already in points). Grid height is computed to show every row (no inner scroll) up to a 900px cap.
 - Missing-ingredient handling: incomplete mask = Missing Ingredients list non-empty; st.warning above the table listing affected menu items + unpriced IDs; amber Styler row wash (rgba(255,171,0,0.18), theme-safe) on incomplete rows; Missing Ingredients rendered as comma-joined string ("" not []) via a display copy.
 - requirements.txt now has streamlit.
+- Branding: two assets/ files — row-and-ride-logo-circle.png (ICON: st.logo sidebar badge + browser-tab favicon via page_icon) and boat-house-logo.png (HEADER: wordmark at far right of the title row). Both guarded by Path.exists() so the app runs without them; swap a Path for a URL string to use a hosted image. Layout quirks handled with a CSS <style> block: st.logo enlarged past size="large" (height 3rem) and padded off the window top; the header wordmark is an <img> inlined as a base64 data URI (st.markdown HTML can't read assets/), position:absolute bottom-anchored to the <h1> and pinned right so growing it pushes *up* into headroom, not down onto the content below. Two coupled knobs: img height:11rem and [data-testid="stMainBlockContainer"] padding-top:9.5rem — every +1rem of logo needs ~+1rem more padding-top or Streamlit's fixed top bar clips the logo. Currently tuned and looks right; leave the two values in sync if changing.
 
 WHAT'S LEFT:
 To make it usable:
-- /data fallback — planned but not built. Currently hard-stops until all 3 files are uploaded; fall back to data/*.csv when nothing is uploaded so dev/demo doesn't re-upload every reload. Goes inside load_source_data().
-- Bowl-undercount caveat — the known modeling gap (bowls priced "includes any 4 toppings", no topping rows in recipe_sheet.csv). Bowl margins currently render as trustworthy while inflated. Needs at least a visible caveat near those rows, ideally the same de-confidence treatment as missing-ingredient rows.
-- Menu Item Category validation — build_margin_report reads that column but load_menu_items only requires {Menu Item, Selling Price}, so a menu CSV without it throws a raw KeyError instead of the friendly _validate_columns ValueError. One-line fix (add it to the required set).
-- Non-ValueError upload failures — empty file / non-CSV / pandas ParserError aren't caught by `except ValueError` and dump a traceback into the UI.
+- Bowl-undercount caveat — the known modeling gap (bowls priced "includes any 4 toppings", no topping rows in recipe_sheet.csv). Bowl margins currently render as trustworthy while inflated. Needs at least a visible caveat near those rows, ideally the same de-confidence treatment as missing-ingredient rows. NEXT.
+- Harden the sheet read further — the (URLError, ParserError) catch covers offline / 404 / HTML-login-page, but a sheet that loads yet is missing a whole tab, or has a renamed tab, currently surfaces as a less-obvious ValueError/parse error. Consider a clearer "tab X not found" message.
+DONE since first pass:
+- /data upload flow replaced by the Google Sheet backend (above).
+- Menu Item Category now in load_menu_items' required set (#3).
+- Non-ValueError failures: load_source_data now also catches (URLError, ParserError), so an unreachable / wrongly-shared sheet shows a friendly st.error instead of a traceback (#4, in its new Sheets form).
 Polish:
 - README.md is empty — for the resume-project angle it needs what/why/screenshot/run steps.
 - No tests around the display layer. Streamlit is awkward to test, but the missing-ingredient formatting (list → comma string, incomplete mask) could move to a small helper with a unit test.
-- The st.success("Loaded N ingredients…") line is scaffolding — drop or move to the sidebar once the report is the main event.
+- The module-level st.success("Loaded N ingredients…") line is now redundant with the sidebar "Loaded — <time>" caption — drop or fold together.
 
 Stretch goal: sidebar widget to override one ingredient's Purchase Cost and watch food cost % recompute (demonstrates the cascade). Food-cost threshold highlighting (flag items above a target %). Further stretch: in-app persistent editing saved back to CSV.
 

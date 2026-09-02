@@ -1,25 +1,38 @@
 """Row and Ride margin dashboard — Streamlit UI.
 
-Upload the three CSVs (ingredient database, recipe sheet, menu items) and get a
-per-menu-item margin report.
+Reads the three tabs of the Row and Ride margin Google Sheet (INGREDIENT
+DATABASE, RECIPE SHEET, MENU ITEMS) and shows a per-menu-item margin report.
+The shop edits the sheet; the app picks the changes up on its own (cached, with
+a manual "Refresh from sheet" button).
 
 All knowledge of *where* the data comes from is confined to load_source_data()
 below. It returns three cleaned DataFrames; every section after it works with
-DataFrames only, so another source (e.g. a Google Sheets import) can be added
-inside that one function without touching the report or display code.
+DataFrames only, so the source could be swapped (back to CSV upload, or to a
+service-account API) inside that one function without touching anything else.
 """
 
 import base64
+from datetime import datetime
 from pathlib import Path
+from urllib.error import URLError
 
 import streamlit as st
+from pandas.errors import ParserError
 
 from src.calculator import build_margin_report
 from src.data_loader import (
+    google_sheet_csv_url,
     load_ingredient_database,
     load_recipe_sheet,
     load_menu_items,
 )
+
+# Backend: the Row and Ride margin workbook, shared "Anyone with the link ->
+# Viewer" so its per-tab CSV export is readable without credentials. Keys are
+# the tab names exactly as they appear in the sheet.
+SPREADSHEET_ID = "1t1L2AvixDlgnFTuZhUqucrXwGY31kvNuUD05slbRelU"
+SHEET_EDIT_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/edit"
+SHEET_CACHE_TTL = 600  # seconds before an untouched app re-pulls the sheet
 
 # Brand marks (assets/). ICON is the circular badge — the sidebar logo (above
 # "Data source") and the browser-tab favicon. HEADER is the full wordmark shown
@@ -81,61 +94,61 @@ else:
 
 
 # --------------------------------------------------------------------------- #
-# Data loading — the only section that knows the data is CSV uploads.         #
-# Swap the body of load_source_data() to add another source later.            #
+# Data loading — the only section that knows the data lives in a Google Sheet. #
+# Swap the body of load_source_data() to change where the DataFrames come from.#
 # --------------------------------------------------------------------------- #
 
 
-def load_source_data():
-    """Render the sidebar uploaders and return the three cleaned DataFrames.
+@st.cache_data(ttl=SHEET_CACHE_TTL, show_spinner="Loading data from the Google Sheet…")
+def _fetch_sheet(spreadsheet_id: str):
+    """Pull + clean + validate all three tabs. Cached, so reruns don't refetch;
+    the cache key is spreadsheet_id and it expires after SHEET_CACHE_TTL. Returns
+    (ingredient_database, recipe_sheet, menu_items, fetched_at). Exceptions
+    propagate to load_source_data() to be shown in the UI (a cache miss re-runs
+    this, so a transient network error isn't stuck in the cache)."""
+    ingredient_database = load_ingredient_database(
+        google_sheet_csv_url(spreadsheet_id, "INGREDIENT DATABASE")
+    )
+    recipe_sheet = load_recipe_sheet(
+        google_sheet_csv_url(spreadsheet_id, "RECIPE SHEET")
+    )
+    menu_items = load_menu_items(google_sheet_csv_url(spreadsheet_id, "MENU ITEMS"))
+    return ingredient_database, recipe_sheet, menu_items, datetime.now()
 
-    Returns (ingredient_database, recipe_sheet, menu_items) once all three files
-    are uploaded and parse cleanly. Until then — or if any loader raises
-    ValueError (missing required column, malformed currency cell) — it reports
-    the situation and halts the script with st.stop(), so nothing downstream
-    ever runs on partial data.
+
+def load_source_data():
+    """Read the Google Sheet and return the three cleaned DataFrames.
+
+    Returns (ingredient_database, recipe_sheet, menu_items). On a data problem in
+    the sheet (missing column, malformed currency cell → ValueError) or an
+    unreachable / wrongly-shared sheet (URLError / ParserError), it shows the
+    problem and halts the script with st.stop() so nothing downstream runs on
+    bad data.
     """
     st.sidebar.header("Data source")
-    st.sidebar.caption("Upload the three CSVs exported from the margin spreadsheet.")
+    st.sidebar.caption("Live from the Row and Ride margin Google Sheet.")
+    st.sidebar.link_button("Open the sheet", SHEET_EDIT_URL, use_container_width=True)
+    if st.sidebar.button("Refresh from sheet", use_container_width=True):
+        _fetch_sheet.clear()
+        st.rerun()
 
-    # (label, uploaded file, loader) — one entry per CSV.
-    sources = [
-        (
-            "Ingredient Database",
-            st.sidebar.file_uploader(
-                "Ingredient database CSV", type="csv", key="ingredient_database"
-            ),
-            load_ingredient_database,
-        ),
-        (
-            "Recipe Sheet",
-            st.sidebar.file_uploader(
-                "Recipe sheet CSV", type="csv", key="recipe_sheet"
-            ),
-            load_recipe_sheet,
-        ),
-        (
-            "Menu Items",
-            st.sidebar.file_uploader("Menu items CSV", type="csv", key="menu_items"),
-            load_menu_items,
-        ),
-    ]
-
-    not_yet_uploaded = [label for label, file, _ in sources if file is None]
-    if not_yet_uploaded:
-        st.info("Waiting on: " + ", ".join(not_yet_uploaded) + ".")
+    try:
+        ingredient_database, recipe_sheet, menu_items, fetched_at = _fetch_sheet(
+            SPREADSHEET_ID
+        )
+    except ValueError as error:
+        st.error(f"The Google Sheet has a data problem: {error}")
+        st.stop()
+    except (URLError, ParserError) as error:
+        st.error(
+            "Couldn't read the Google Sheet. Check that it's shared as "
+            "“Anyone with the link → Viewer” and that you're online.\n\n"
+            f"{error}"
+        )
         st.stop()
 
-    frames = []
-    for label, file, loader in sources:
-        try:
-            frames.append(loader(file))
-        except ValueError as error:
-            st.error(f"**{label}** could not be loaded: {error}")
-            st.stop()
-
-    st.sidebar.success("All three CSVs loaded.")
-    return tuple(frames)
+    st.sidebar.success(f"Loaded — {fetched_at:%b %d, %I:%M %p}")
+    return ingredient_database, recipe_sheet, menu_items
 
 
 ingredient_database, recipe_sheet, menu_items = load_source_data()

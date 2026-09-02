@@ -1,4 +1,22 @@
+from urllib.parse import quote
+
 import pandas as pd
+
+
+def google_sheet_csv_url(spreadsheet_id: str, sheet_name: str) -> str:
+    """
+    Builds the CSV-export URL for one tab of a Google Sheet.
+
+    spreadsheet_id is the long id from the sheet's URL; sheet_name is the tab's
+    display name (e.g. "INGREDIENT DATABASE"). The workbook must be shared
+    "Anyone with the link -> Viewer" for this to be readable without credentials.
+    The result is a plain URL string — pass it straight to any load_* function
+    below, exactly like a local path.
+    """
+    return (
+        f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}"
+        f"/gviz/tq?tqx=out:csv&sheet={quote(sheet_name)}"
+    )
 
 
 def strip_currency(series: pd.Series) -> pd.Series:
