@@ -6,7 +6,7 @@ A margins dashboard for a smoothie and bowl bar, replacing a hand-maintained Goo
 
 ## Why
 
-Boat House runs on Clover for sales and inventory, but Clover doesn't compute what a drink costs to make or its food cost percentage. That math lived in a spreadsheet instead, worked out by hand — so every time an ingredient's price changed, someone had to hunt down every menu item that used it and redo the numbers. This tool reads the same spreadsheet and does that recalculation automatically: update one ingredient's cost, and every item it touches is right again on the next refresh.
+Boat House runs on Clover for sales and inventory, but Clover doesn't compute what a drink costs to make or its food cost percentage. That math lived in a spreadsheet instead, worked out by hand, so every time an ingredient's price changed someone had to hunt down every menu item that used it and redo the numbers. This tool reads the same spreadsheet and does that recalculation automatically: update one ingredient's cost, and every item it touches is right again on the next refresh.
 
 ## How it works
 
