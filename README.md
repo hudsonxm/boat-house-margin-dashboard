@@ -47,7 +47,7 @@ pip install -r requirements.txt
 python -m streamlit run app.py
 ```
 
-The Google Sheet is read through a service account. Copy `.streamlit/secrets.toml.example` to `.streamlit/secrets.toml` and fill in a service-account key JSON under `[gcp_service_account]`; the target sheet must be shared with that account as a viewer (without it the app still starts and explains what's missing.)
+The Google Sheet is read through a service account. Copy `.streamlit/secrets.toml.example` to `.streamlit/secrets.toml` and fill in a service-account key JSON under `[gcp_service_account]`; the target sheet must be shared with that account as a viewer, but without it the app still starts and explains what's missing.
 
 ## Deployment
 
