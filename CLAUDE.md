@@ -3,39 +3,45 @@ Project: Row and Ride Margins Dashboard
 Building a Python tool to replace a Google Sheets margin calculator for my mom's smoothie/bowl bar (Row and Ride / Boathouse Nutrition). It's also my resume project for co-op search (rising 2nd year, Northeastern).
 Goal: Streamlit dashboard where you upload 3 CSVs (ingredient database, recipe sheet, menu items) and it automatically calculates ingredient cost, gross profit, and food cost % per menu item — replacing manual spreadsheet math. (Margin % is still computed inside calculator.py — it's how food cost % is derived — but it is NOT surfaced in the report or UI: the shop only tracks food cost %.)
 
-Data schema (full CSVs live in /data; pinned test fixtures in /data/fixtures):
-ingredient_database.csv: Ingredient ID, Ingredient, Category, Purchase Size, Purchase Unit, Purchase Cost, Cost Per Recipe Unit, Recipe Unit, Supplier, Last Updated, Notes. Ingredient ID (e.g. FRZ-BANANAS, PKG-20OZ_LID) is the stable join key. The database is now fully populated — every row has cost data (many rows are supplier-estimated, flagged "EST" in Notes). No more pilot_ingredient_database.csv; the calculator's regression fixtures live in /data/fixtures/ instead.
-recipe_sheet.csv: Menu Item, Ingredient ID, Ingredient, Ingredient Category, Amount Used, Recipe Unit, Notes. Joins to ingredient_database on Ingredient ID. Duplicate ingredient rows per menu item were consolidated manually for the pilot (e.g. Shark Bite's two Power Tea Flavors rows merged into one) — the code does NOT dedupe automatically yet.
-menu_items.csv: Menu Item, Menu Item Category, Available At, Selling Price, Notes. The old Total Ingredient Cost / Gross Profit / Margin % / Food Cost columns have been removed from the file — they are computed outputs now, not stored.
+Data source: the running app reads the live Google Sheet (see app.py — service account). The only tracked data is `data/fixtures/` (frozen pilot test inputs — see below); loose `data/*.csv` is gitignored. Repo is public: no full ingredient-cost export or supplier list belongs in it.
 
-/data/fixtures/ (pinned regression oracle for test_calculator.py — deliberately frozen, do NOT reconcile with /data):
-- ingredient_database.csv, recipe_sheet.csv, menu_items.csv: the 4 original pilot menu items (Peanut Butter Banana, Cold Brew Bliss, Shark Bite, Acai Mixed Berry Bowl) with the exact ingredient amounts, IDs, and prices that produced the hand-calculated margins. These diverge from /data on purpose (e.g. fixture Shark Bite draws 3 fl oz from BEV-ICED_TEA costed via the 16.88 fl oz/bag conversion; live data models brewed tea as its own PRP-BREWED_TEA ingredient. Fixture Acai bowl bakes 4 toppings into the recipe at $12.00; live menu_items prices it $13.90 with toppings as separate line items).
+Sheet tab schema (what data_loader validates against):
+- INGREDIENT DATABASE: Ingredient ID, Ingredient, Category, Purchase Size, Purchase Unit, Purchase Cost, Cost Per Recipe Unit, Recipe Unit, Supplier, Last Updated, Notes. Ingredient ID (e.g. FRZ-BANANAS, PKG-20OZ_LID) is the stable join key. Cost Per Recipe Unit is a stored-but-ignored column — the engine recomputes it. Many rows are supplier-estimated ("EST" in Notes).
+- RECIPE SHEET: Menu Item, Ingredient ID, Ingredient, Ingredient Category, Amount Used, Recipe Unit, Notes. Joins to INGREDIENT DATABASE on Ingredient ID. Duplicate ingredient rows per menu item were consolidated by hand (e.g. Shark Bite's two Power Tea Flavors rows merged) — the code does NOT dedupe.
+- MENU ITEMS: Menu Item, Menu Item Category, Available At, Selling Price, Notes. No stored cost/profit/margin columns — those are computed outputs.
+
+data/fixtures/ (pinned regression oracle for the pytest suite — deliberately frozen, do NOT reconcile with the live Sheet):
+- ingredient_database.csv, recipe_sheet.csv, menu_items.csv: the 4 pilot menu items (Peanut Butter Banana, Cold Brew Bliss, Shark Bite, Acai Mixed Berry Bowl) with the exact ingredient amounts, IDs, and costs whose margins were hand-checked against the original Google Sheets calculator. Real numbers — but the Supplier column is blanked (don't want vendor names in a public repo). The fixture Shark Bite still draws 3 fl oz from BEV-ICED_TEA (the bags→fl oz path); the fixture Acai bowl bakes 4 toppings into its recipe.
 - expected_ingredient_costs.csv: Menu Item, Ingredient ID, Expected Ingredient Cost ($-string) — per-row expected output, computed from unrounded Purchase Cost / Purchase Size.
-- expected_margins.csv: Menu Item, Expected Total Ingredient Cost, Expected Gross Profit, Expected Margin %, Expected Food Cost ($/%-strings, display-rounded — assert with tolerance ~1 cent, not exact).
+- expected_margins.csv: Menu Item, Expected Total Ingredient Cost, Expected Gross Profit, Expected Margin %, Expected Food Cost ($/%-strings, display-rounded — pipeline tests assert with ~1-cent / 0.01-point tolerance). Still carries Expected Margin % though the report doesn't surface it.
+- test_calculator.py has a couple of inline ingredient-DB DataFrames / cost literals mirroring these fixture values; if a fixture number ever changes, those need updating too.
 
 Key architecture decision: The cost/profit/margin/food-cost columns (previously hand-calculated in Sheets) are computed outputs, not inputs — the engine recomputes Cost Per Recipe Unit from Purchase Cost / Purchase Size (rather than trusting the pre-filled column, which goes stale when prices change), multiplies by Amount Used from the recipe sheet, and derives everything else, so updating one ingredient price cascades everywhere automatically. Those columns have now been deleted from menu_items.csv and recipe_sheet.csv entirely; the reference values for comparison live only in /data/fixtures/expected_*.csv.
 
-Bowl toppings (was a modeling gap, now handled by data): the 7 Beach Bowls sell at $13.90 "includes any 4 toppings" but their recipe rows had no toppings, so served-bowl cost was undercounted and margin looked artificially high. Fix: every Beach Bowl now carries 4 "representative topping" rows in RECIPE SHEET — FSH-STRAWBERRIES 1.5 oz, FSH-BLUEBERRIES 1 oz, FSH-BANANAS 2 oz, SPR-PEANUT_BUTTER 1 oz (the owner's stated standard set; portions reuse the shop's own standalone "Topping:" menu-item sizes, two of which are noted "matches pilot Acai bowl"). Notes column on each: "representative topping - bowls include any 4 and this is the standard set". Adds ~$0.71 cost / ~5 food-cost points per bowl. No double-count: the $13.90 price already includes toppings (revenue side); only the cost side was missing, and the standalone "Topping:" menu items are separate products, not shared rows. It's an assumption — every bowl is costed as if served with this exact set — but far better than $0, and the standard way food-cost sheets handle customizable items. Applied via normal ingredient lines, no special-case code. Done in both /data/recipe_sheet.csv and the live Google Sheet RECIPE SHEET tab (28 rows, one per bowl x topping) — the sheet now has 431 recipe rows.
+Bowl toppings (was a modeling gap, now handled by data): the 7 Beach Bowls sell at $13.90 "includes any 4 toppings" but their recipe rows had no toppings, so served-bowl cost was undercounted and margin looked artificially high. Fix: every Beach Bowl now carries 4 "representative topping" rows in RECIPE SHEET — FSH-STRAWBERRIES 1.5 oz, FSH-BLUEBERRIES 1 oz, FSH-BANANAS 2 oz, SPR-PEANUT_BUTTER 1 oz (the owner's stated standard set; portions reuse the shop's own standalone "Topping:" menu-item sizes, two of which are noted "matches pilot Acai bowl"). Notes column on each: "representative topping - bowls include any 4 and this is the standard set". Adds ~$0.71 cost / ~5 food-cost points per bowl. No double-count: the $13.90 price already includes toppings (revenue side); only the cost side was missing, and the standalone "Topping:" menu items are separate products, not shared rows. It's an assumption — every bowl is costed as if served with this exact set — but far better than $0, and the standard way food-cost sheets handle customizable items. Applied via normal ingredient lines, no special-case code. Lives in the live Google Sheet RECIPE SHEET tab (28 rows, one per bowl x topping — the sheet has 431 recipe rows). Not reflected in data/fixtures/ (whose recipe_sheet is only the 4 pilot items; the fixture Acai bowl already bakes toppings into its recipe).
 
 Unit conversion notes (in cost_per_recipe_unit):
 - lbs → oz uses factor 16 (standard unit conversion) — the workhorse conversion; used by all the bulk lbs-purchased items
-- bags → fl oz uses factor 16.88 (Row and Ride's estimated fl oz yield per tea bag — a business assumption, NOT a universal conversion). Now only exercised by /data/fixtures/ — the live database tracks Brewed Tea (PRP-BREWED_TEA) as its own prepared ingredient with a hand-entered batch cost, so nothing in /data/recipe_sheet.csv hits this branch. Keep it anyway for the regression fixtures.
-- everything else falls through to factor 1 (oz→oz, fl oz→fl oz, each→each, ml→ml, cubes→cubes). Across the whole current dataset, lbs→oz and the fixture-only bags→fl oz are the ONLY real conversions — every other row was entered with Purchase Unit == Recipe Unit.
+- bags → fl oz uses factor 16.88 (Row and Ride's estimated fl oz yield per tea bag — a business assumption, NOT a universal conversion). Only exercised by data/fixtures/ + test_cost_per_recipe_unit_iced_tea now — the live sheet tracks Brewed Tea (PRP-BREWED_TEA) as its own prepared ingredient with a hand-entered batch cost, so nothing in the live RECIPE SHEET hits this branch. Keep it for the regression fixtures.
+- everything else falls through to factor 1 (oz→oz, fl oz→fl oz, each→each, ml→ml, cubes→cubes). lbs→oz and the fixture-only bags→fl oz are the ONLY real conversions — every other row is entered with Purchase Unit == Recipe Unit.
 - FIXED (was a data-entry landmine): Coconut Cubes now has Purchase Unit "cubes" and Recipe Unit "cubes" matching exactly, so it hits the factor-1 path on purpose instead of by accident.
 
-Missing-data policy: When cost data is blank (NaN), cost_per_recipe_unit returns None. The None check happens ONCE, in the glue function — downstream math functions stay dumb and do not each check for None. Missing ingredients (unmatched Ingredient ID, or None cost) are flagged and surfaced in the UI, never silently skipped or treated as $0.00 (which would make margins look artificially good). The full database currently has no blank rows, so this path now guards newly-added-but-unpriced ingredients and mistyped IDs.
+Missing-data policy: When cost data is blank (NaN), cost_per_recipe_unit returns None. The None check happens ONCE, in the glue function — downstream math functions stay dumb and do not each check for None. Missing ingredients (unmatched Ingredient ID, or None cost) are flagged and surfaced in the UI, never silently skipped or treated as $0.00 (which would make margins look artificially good). The live sheet currently has no blank rows, so this path guards newly-added-but-unpriced ingredients and mistyped IDs.
 
 Structure:
 row_and_ride_dashboard/
-├── data/              # full CSVs for local dev
-│   └── fixtures/      # pinned 4-item pilot + expected_*.csv oracles for tests
+├── data/
+│   ├── README.md      # "app reads the live Sheet; data/*.csv is gitignored"
+│   └── fixtures/      # frozen 4-item pilot inputs + expected_*.csv oracle (real numbers, Supplier blanked)
 ├── src/
 │   ├── calculator.py  # pure functions: cost lookup, margin math
-│   └── data_loader.py # CSV loading, cleaning, validation
-├── app.py             # Streamlit UI (in progress — read-only margin report MVP)
+│   └── data_loader.py # CSV/Sheet loading, cleaning, validation
+├── app.py             # Streamlit UI — reads the Google Sheet, renders the margin report
+├── .streamlit/
+│   └── secrets.toml.example  # service-account key template (real one gitignored)
 ├── tests/
-│   ├── test_calculator.py  # pytest: unit tests + end-to-end pipeline tests against /data/fixtures
-│   └── test_data_loader.py # pytest: strip_currency/_parse_currency_column/_validate_columns + load_* against /data/fixtures
+│   ├── test_calculator.py  # pytest: unit tests + end-to-end pipeline tests vs data/fixtures
+│   └── test_data_loader.py # pytest: strip_currency/_parse_currency_column/_validate_columns + load_* vs data/fixtures
 ├── requirements.txt
 └── README.md
 
@@ -56,7 +62,7 @@ DONE — data_loader.py is complete, all functions implemented with passing pyte
 - load_ingredient_database(source) -> pd.DataFrame — validates {Ingredient ID, Purchase Size, Purchase Unit, Purchase Cost, Recipe Unit}, cleans Purchase Cost.
 - load_recipe_sheet(source) -> pd.DataFrame — validates {Menu Item, Ingredient ID, Amount Used}; no cleaning needed, nothing in recipe_sheet.csv is currency-formatted.
 - load_menu_items(source) -> pd.DataFrame — validates {Menu Item, Menu Item Category, Selling Price}, cleans Selling Price. (Menu Item Category added to the required set because build_margin_report reads it — was a raw KeyError otherwise.)
-- google_sheet_csv_url(spreadsheet_id, sheet_name) -> str — builds the gviz per-tab CSV export URL (URL-encodes the tab name, pins headers=1). NO LONGER USED by app.py (switched to a service account, see below) — kept as a tested utility / documented fallback. If you drop it, also drop test_google_sheet_csv_url_encodes_tab_name. NOTE if ever reused: headers=1 is load-bearing — without it gviz auto-detects the header-row count and, once a tab is large enough, guesses wrong (collapses column A into one giant row-1 cell, drops the real header → _validate_columns fails).
+- (removed) google_sheet_csv_url — the old public-gviz-export URL builder; deleted with its test when app.py moved to a service account. If a gviz path is ever revived: the export URL needs &headers=1 or gviz mis-detects the header-row count on a large tab (collapses column A into one giant row-1 cell → _validate_columns fails).
 - `source` can be a local path, a Streamlit-uploaded file object, or a URL string — pd.read_csv handles all three the same way.
 - Design landed on one function per CSV + shared strip_currency/_parse_currency_column/_validate_columns helpers (the open question from before).
 
@@ -87,7 +93,7 @@ DONE since first pass:
 - Menu Item Category now in load_menu_items' required set (#3).
 - Non-ValueError failures: load_source_data has targeted st.error branches for every credential / permission / tab / API failure mode (see the load_source_data bullet above) — no tracebacks (#4).
 - Auth switched from "anyone with the link" gviz export to a service account (for Streamlit Cloud deploy) — sheet is now Restricted.
-- Bowl-undercount (#2): fixed in the data, not the code — representative topping rows on every Beach Bowl (see "Bowl toppings" note up top). /data/recipe_sheet.csv done; the 28 rows still need pasting into the live Google Sheet RECIPE SHEET tab.
+- Bowl-undercount (#2): fixed in the data, not the code — 28 representative topping rows added to the live Google Sheet RECIPE SHEET tab (see "Bowl toppings" note up top). No local CSV involved.
 Polish:
 - README.md is empty — for the resume-project angle it needs what/why/screenshot/run steps.
 - No tests around the display layer. Streamlit is awkward to test, but the missing-ingredient formatting (list → comma string, incomplete mask) could move to a small helper with a unit test.

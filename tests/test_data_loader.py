@@ -8,23 +8,9 @@ from src.data_loader import load_menu_items
 from src.data_loader import load_recipe_sheet
 from src.data_loader import _validate_columns
 from src.data_loader import _parse_currency_column
-from src.data_loader import google_sheet_csv_url
 
 FIXTURES = Path(__file__).resolve().parent.parent / "data" / "fixtures"
 
-
-def test_google_sheet_csv_url_encodes_tab_name():
-    """
-    google_sheet_csv_url() builds the per-tab CSV export endpoint and
-    URL-encodes the tab's display name (spaces -> %20) so a multi-word tab like
-    "INGREDIENT DATABASE" resolves instead of 400ing.
-    """
-    url = google_sheet_csv_url("SHEET_ID_123", "INGREDIENT DATABASE")
-
-    assert url == (
-        "https://docs.google.com/spreadsheets/d/SHEET_ID_123"
-        "/gviz/tq?tqx=out:csv&headers=1&sheet=INGREDIENT%20DATABASE"
-    )
 
 def test_strip_currency_preserve_nan():
     """

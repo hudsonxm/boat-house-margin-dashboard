@@ -216,3 +216,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local working data — the app reads the live Google Sheet, so real ingredient
+# cost exports don't belong in the repo. The frozen test fixtures are kept.
+data/*.csv
+!data/fixtures/
