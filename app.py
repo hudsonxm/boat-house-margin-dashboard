@@ -1,6 +1,6 @@
-"""Row & Ride margin dashboard — Streamlit UI.
+"""Boat House margin dashboard — Streamlit UI.
 
-Reads the three tabs of the Row & Ride margin Google Sheet (INGREDIENT
+Reads the three tabs of the Boat House margin Google Sheet (INGREDIENT
 DATABASE, RECIPE SHEET, MENU ITEMS) and shows a per-menu-item margin report.
 The shop edits the sheet; the app picks the changes up on its own (cached, with
 a manual "Refresh from sheet" button).
@@ -29,7 +29,7 @@ from src.data_loader import (
     load_menu_items,
 )
 
-# Backend: the Row & Ride margin workbook. Read through a Google service
+# Backend: the Boat House margin workbook. Read through a Google service
 # account whose key JSON lives in st.secrets["gcp_service_account"] (local
 # .streamlit/secrets.toml + Streamlit Cloud Secrets); the sheet itself stays
 # Restricted, shared only with that account's client_email as Viewer.
@@ -58,7 +58,7 @@ _icon = str(ICON) if ICON.exists() else None
 _header = str(HEADER) if HEADER.exists() else None
 
 st.set_page_config(
-    page_title="Row & Ride Margins",
+    page_title="Boat House Margins",
     page_icon=_icon,
     layout="wide",
 )
@@ -152,7 +152,7 @@ def load_source_data():
     bad data in the sheet (ValueError) — so nothing downstream runs on bad data.
     """
     st.sidebar.header("Data source")
-    st.sidebar.caption("Live from the Row & Ride margins Google Sheet.")
+    st.sidebar.caption("Live from the Boat House margins Google Sheet.")
     st.sidebar.link_button("Open the sheet", SHEET_EDIT_URL, use_container_width=True)
     if st.sidebar.button("Refresh from sheet", use_container_width=True):
         _fetch_sheet.clear()
@@ -218,7 +218,7 @@ if _header:
     st.markdown(
         f"""
         <div style="position:relative; margin:0.5rem 0 1rem;">
-            <h1 style="margin:0; padding:0;">Row & Ride Margins Dashboard</h1>
+            <h1 style="margin:0; padding:0;">Boat House Margins Dashboard</h1>
             <p style="margin:0.25rem 0 0; font-size:0.875rem; opacity:0.6;">{_counts}</p>
             <img src="data:image/png;base64,{_header_uri}"
                  style="position:absolute; right:0; bottom:0; height:11rem;
@@ -228,7 +228,7 @@ if _header:
         unsafe_allow_html=True,
     )
 else:
-    st.title("Row & Ride Margins Dashboard")
+    st.title("Boat House Margins Dashboard")
     st.caption(_counts)
 
 st.divider()

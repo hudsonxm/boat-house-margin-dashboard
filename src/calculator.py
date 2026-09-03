@@ -16,7 +16,7 @@ def cost_per_recipe_unit(
     if purchase_unit == "lbs" and recipe_unit == "oz":
         factor = 16  # Standard unit conversion factor for pounds to ounces
     elif purchase_unit == "bags" and recipe_unit == "fl oz":
-        factor = 16.88  # Row and Ride's estimated fl oz yield per tea bag
+        factor = 16.88  # Boat House's estimated fl oz yield per tea bag
 
     return purchase_cost / (purchase_size * factor)
 
