@@ -1,6 +1,6 @@
 # data/
 
-The running app reads its data from the **live Row and Ride margin Google
+The running app reads its data from the **live Boat House margin Google
 Sheet** (three tabs: INGREDIENT DATABASE, RECIPE SHEET, MENU ITEMS), pulled
 through a service account (see `app.py` / `src/data_loader.py`). Nothing in this
 folder is loaded at runtime.

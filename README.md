@@ -1,6 +1,6 @@
 # Boat House Margins Dashboard
 
-A margins dashboard for a smoothie and bowl bar, replacing a hand-maintained Google Sheets cost calculator.
+A margins dashboard for [Boat House](https://boathouseonthego.com), a smoothie and bowl bar, replacing a hand-maintained Google Sheets cost calculator.
 
 ![Dashboard](assets/screenshot.png)
 

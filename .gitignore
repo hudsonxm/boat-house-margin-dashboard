@@ -221,3 +221,6 @@ __marimo__/
 # cost exports don't belong in the repo. The frozen test fixtures are kept.
 data/*.csv
 !data/fixtures/
+
+.vscode/settings.json
+.DS_Store
