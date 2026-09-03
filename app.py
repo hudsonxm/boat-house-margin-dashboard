@@ -276,15 +276,26 @@ else:
     )
     k3.metric("Avg. gross profit", f"${solid['Gross Profit'].mean():.2f}")
     best = solid.loc[solid["Food Cost"].idxmin()]
-    # The food-cost % rides in the metric's delta slot (grey, no arrow) so it
-    # sits tight under the item name instead of a full row's gap below it.
-    k4.metric(
-        "Best margin",
-        str(best["Menu Item"]),
-        f"{best['Food Cost']:.1f}% food cost",
-        delta_color="off",
-        delta_arrow="off",
-    )
+    best_name = str(best["Menu Item"])
+    # A long name (e.g. "Peanut Butter Banana & Honey") would ellipsis-truncate
+    # in the metric value, so taper the font down past ~16 chars (readable floor,
+    # then wrap). The food-cost % rides in the metric's delta slot (grey, no
+    # arrow) so it sits tight under the name instead of a row's gap below it.
+    _name_rem = 1.75 if len(best_name) <= 16 else round(max(1.0, 1.75 - (len(best_name) - 16) * 0.06), 2)
+    with k4.container(key="best-margin"):
+        st.markdown(
+            f"<style>.st-key-best-margin [data-testid='stMetricValue'] {{ "
+            f"font-size: {_name_rem}rem; white-space: normal; overflow-wrap: anywhere; "
+            f"line-height: 1.2; }}</style>",
+            unsafe_allow_html=True,
+        )
+        st.metric(
+            "Best margin",
+            best_name,
+            f"{best['Food Cost']:.1f}% food cost",
+            delta_color="off",
+            delta_arrow="off",
+        )
 
     def _top5(column: str, value_label: str, fmt):
         out = solid.nlargest(5, column)[["Menu Item", column]].copy()

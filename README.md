@@ -41,7 +41,7 @@ Python · pandas · Streamlit · gspread · pytest
 
 ```
 git clone <repo>
-cd row-and-ride-margin-dashboard
+cd boat-house-margin-dashboard
 pip install -r requirements.txt
 python -m streamlit run app.py
 ```
@@ -50,4 +50,4 @@ The Google Sheet is read through a service account. Copy `.streamlit/secrets.tom
 
 ## Deployment
 
-The live app is private — it reads a real business's ingredient costs and vendor data.
+The live app is private, it reads a real business's ingredient costs and vendor data.
