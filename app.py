@@ -16,6 +16,7 @@ import csv
 import io
 from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import gspread
 import streamlit as st
@@ -37,6 +38,10 @@ SHEET_EDIT_URL = f"https://docs.google.com/spreadsheets/d/{SPREADSHEET_ID}/edit"
 SHEET_TABS = ("INGREDIENT DATABASE", "RECIPE SHEET", "MENU ITEMS")  # exact tab names
 SHEET_READONLY_SCOPE = "https://www.googleapis.com/auth/spreadsheets.readonly"
 SHEET_CACHE_TTL = 600  # seconds before an untouched app re-pulls the sheet
+
+# Streamlit Cloud runs in UTC; stamp the "Loaded —" time in the shop's zone
+# instead (handles EST/EDT automatically). Needs the tzdata package on Windows.
+SHOP_TZ = ZoneInfo("America/New_York")
 
 # Food cost above this (%) is the "keep an eye on it" line — ~30% is the
 # rule-of-thumb target for a juice/smoothie bar; 35% is where margin starts to hurt.
@@ -134,7 +139,7 @@ def _fetch_sheet():
         buffer.seek(0)
         frames.append(loader(buffer))
 
-    return (*frames, datetime.now())
+    return (*frames, datetime.now(SHOP_TZ))
 
 
 def load_source_data():
@@ -188,7 +193,7 @@ def load_source_data():
         st.error(f"The Google Sheet has a data problem: {error}")
         st.stop()
 
-    st.sidebar.success(f"Loaded — {fetched_at:%b %d, %I:%M %p}")
+    st.sidebar.success(f"Loaded — {fetched_at:%b %d, %I:%M %p %Z}")
     return ingredient_database, recipe_sheet, menu_items
 
 
